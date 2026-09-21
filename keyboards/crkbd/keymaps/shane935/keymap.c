@@ -8,7 +8,7 @@ enum layers {
     _NAV_MAC,
     _NAV_LINUX,
     // Toggled, not held, and shared by both OS modes: tmux keys are identical
-    // on Mac and Linux. Toggle on with nav + L(5,2), off with L(5,2) alone.
+    // on Mac and Linux. Toggle on with nav + RT2, off with RT2 alone.
     _TMUX,
 };
 
@@ -76,11 +76,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           OS_SWAP,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                      KC_TAB,      KC_BSPC,        KC_UP,       KC_DEL,       KC_ESC,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          KC_LSFT,      KC_LCTL,      KC_LALT,      KC_LGUI,    TG(_TMUX),                                   G(KC_TAB),      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
+          XXXXXXX,      KC_LCTL,      KC_LALT,      KC_LGUI,      KC_LSFT,                                   G(KC_TAB),      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     G(KC_Z),      G(KC_X),      G(KC_C),      G(KC_V),      G(KC_F),
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      _______,      XXXXXXX,         KC_RSFT,      XXXXXXX,       XXXXXXX
+                                                    XXXXXXX,      _______,      XXXXXXX,         KC_RSFT,    TG(_TMUX),       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   ),
 
@@ -88,11 +88,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           OS_SWAP,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                      KC_TAB,      KC_BSPC,        KC_UP,       KC_DEL,       KC_ESC,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          KC_LSFT,      KC_LGUI,      KC_LALT,      KC_LCTL,    TG(_TMUX),                                   C(KC_TAB),      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
+          XXXXXXX,      KC_LGUI,      KC_LALT,      KC_LCTL,      KC_LSFT,                                   C(KC_TAB),      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     KC_UNDO,       KC_CUT,      KC_COPY,     KC_PASTE,      KC_FIND,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      _______,      XXXXXXX,         KC_RSFT,      XXXXXXX,       XXXXXXX
+                                                    XXXXXXX,      _______,      XXXXXXX,         KC_RSFT,    TG(_TMUX),       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   ),
 
@@ -100,11 +100,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      KC_PGUP,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,    TG(_TMUX),                                     XXXXXXX,      XXXXXXX,      KC_PGDN,      XXXXXXX,      XXXXXXX,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      KC_PGDN,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      XXXXXXX,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
+                                                    XXXXXXX,      XXXXXXX,      XXXXXXX,         XXXXXXX,    TG(_TMUX),       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   )
 };
