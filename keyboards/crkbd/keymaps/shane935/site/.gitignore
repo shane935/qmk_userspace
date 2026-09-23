@@ -1,0 +1,4 @@
+# QMK's root .gitignore has a bare `index.html` rule for the doxygen output,
+# which would silently swallow the generated reference page. This one is meant
+# to be committed, so you can open it straight from a checkout.
+!index.html

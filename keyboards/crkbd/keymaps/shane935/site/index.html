@@ -1,0 +1,4308 @@
+<!doctype html>
+<!--
+  Template for the keymap reference page.
+
+  build.mjs substitutes the KEYMAP_DATA marker below with the parsed keymap and
+  writes index.html. Edit this file, never index.html.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corne keymap reference</title>
+<style>
+:root {
+  --u: 62px;                 /* one key unit; the board scales off this */
+  --gap: 5px;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #16191d;
+  --ink-soft: #5b6472;
+  --ink-faint: #949cab;
+  --line: #dde1e7;
+  --accent: #2f6df6;
+  --warn: #b3610a;
+  --radius: 8px;
+
+  --c-letter:      #8792a3;
+  --c-number:      #2f6df6;
+  --c-punct:       #6f7c8f;
+  --c-modifier:    #7d4bd0;
+  --c-nav:         #0e8a8a;
+  --c-whitespace:  #55606f;
+  --c-editing:     #1c8a4a;
+  --c-mod-tap:     #c2410c;
+  --c-layer-tap:   #c02a7a;
+  --c-mod-combo:   #0f6fa8;
+  --c-layer-toggle:#a8570f;
+  --c-space-cadet: #7d4bd0;
+  --c-custom:      #c2185b;
+  --c-transparent: #949cab;
+  --c-blocked:     #c9ced6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c; --panel: #1c2027; --ink: #e8ebef; --ink-soft: #a2abb9;
+    --ink-faint: #6b7483; --line: #2c323b; --accent: #6b9bff; --warn: #e0a24a;
+    --c-letter: #8f9aab; --c-number: #6b9bff; --c-punct: #7e8b9e;
+    --c-modifier: #a684ee; --c-nav: #35b3b3; --c-whitespace: #93a0b1;
+    --c-editing: #46b877; --c-mod-tap: #f08a4b; --c-layer-tap: #ef73ae;
+    --c-mod-combo: #4aa8e0; --c-layer-toggle: #e0a24a; --c-space-cadet: #a684ee;
+    --c-custom: #f0699c; --c-transparent: #6b7483; --c-blocked: #333a44;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px;
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: -0.01em; }
+.sub { color: var(--ink-soft); font-size: 13px; margin: 0 0 20px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; }
+
+/* ---- controls ---- */
+.controls { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 16px; }
+.seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 7px 15px; border: 0; cursor: pointer;
+  background: transparent; color: var(--ink-soft); border-right: 1px solid var(--line);
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+.seg button:disabled { opacity: 0.4; cursor: default; }
+.toggles { display: flex; gap: 16px; font-size: 13px; color: var(--ink-soft); }
+.toggles label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
+
+/* ---- hint + banner ---- */
+.hint { font-size: 13px; color: var(--ink-soft); margin-bottom: 12px; min-height: 20px; }
+.hint b { color: var(--ink); font-weight: 600; }
+.banner {
+  border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 9%, var(--panel));
+  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 14px; font-size: 13.5px;
+}
+
+/* ---- layout ---- */
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 24px; align-items: start; }
+@media (max-width: 1000px) { .main { grid-template-columns: 1fr; } :root { --u: 52px; } }
+@media (max-width: 680px) { :root { --u: 40px; } body { padding: 14px; } }
+
+/* ---- board ---- */
+.board { position: relative; margin: 0 auto 8px; }
+.key {
+  position: absolute; border: 1px solid var(--line); border-left: 4px solid var(--kc, var(--line));
+  border-radius: var(--radius); background: var(--panel); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 2px; overflow: hidden; font: inherit; text-align: center;
+}
+.key:hover, .key:focus-visible { border-color: var(--accent); border-left-color: var(--kc, var(--accent)); outline: none; }
+.key[data-pinned="true"] { box-shadow: 0 0 0 2px var(--accent); }
+.key .tap { font-size: calc(var(--u) * 0.26); font-weight: 600; line-height: 1.1; color: var(--kc, var(--ink)); }
+.key .hold {
+  font-size: calc(var(--u) * 0.17); color: var(--ink-soft); line-height: 1.2;
+  margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--line); width: 76%;
+}
+.key.no-hold .tap { margin-bottom: calc(var(--u) * 0.04); } /* optically centre */
+
+.key.blocked { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--c-blocked) 4px, var(--c-blocked) 5px); border-left-color: var(--line); cursor: default; }
+.key.transparent .tap { font-style: italic; opacity: 0.75; }
+.key.transparent::after { content: "↓"; position: absolute; top: 2px; right: 4px; font-size: 10px; color: var(--ink-faint); }
+
+/* faint base-layer legend behind non-base layers */
+.key .ghost { position: absolute; top: 2px; left: 5px; font-size: calc(var(--u) * 0.19); color: var(--ink-faint); opacity: 0.55; font-weight: 600; }
+
+/* keys that differ between Mac and Linux */
+.key.diff { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--warn) 55%, transparent); }
+
+/* the key that gets you to this layer */
+.key.entry { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ---- detail panel ---- */
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; font-size: 13.5px; position: sticky; top: 24px; }
+.detail h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
+.detail .big { font-size: 22px; font-weight: 600; margin-bottom: 2px; }
+.detail dl { margin: 12px 0 0; display: grid; grid-template-columns: 52px 1fr; gap: 6px 10px; }
+.detail dt { color: var(--ink-faint); font-size: 12px; padding-top: 1px; }
+.detail dd { margin: 0; }
+.detail .src { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--ink-soft); word-break: break-all; }
+.detail .note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); }
+.detail .timing { margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
+.detail .empty { color: var(--ink-faint); }
+.chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; background: color-mix(in srgb, var(--kc, var(--ink-faint)) 16%, transparent); color: var(--kc, var(--ink-soft)); font-weight: 600; }
+
+/* ---- footer ---- */
+footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.card h3 { margin: 0 0 6px; font-size: 14px; }
+.card p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 18px; font-size: 12px; color: var(--ink-soft); }
+.legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--kc); margin-right: 5px; vertical-align: -1px; }
+.prov { margin-top: 16px; font-size: 11.5px; color: var(--ink-faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Corne keymap reference</h1>
+  <p class="sub">Generated from <code>keymap.c</code>. Hover a key for detail, click to pin it. Keys <kbd>1</kbd>–<kbd>4</kbd> switch layer, <kbd>m</kbd>/<kbd>l</kbd> switch OS.</p>
+
+  <div class="controls">
+    <div class="seg" id="os-switch" role="group" aria-label="Operating system"></div>
+    <div class="seg" id="layer-tabs" role="group" aria-label="Layer"></div>
+    <div class="toggles">
+      <label><input type="checkbox" id="opt-diff"> Show what differs by OS</label>
+      <label><input type="checkbox" id="opt-ghost"> Ghost base layer</label>
+    </div>
+  </div>
+
+  <div id="banner"></div>
+  <p class="hint" id="hint"></p>
+
+  <div class="main">
+    <div>
+      <div class="board" id="board"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <aside class="detail" id="detail"></aside>
+  </div>
+
+  <footer>
+    <div class="cards" id="cards"></div>
+    <p class="prov" id="prov"></p>
+  </footer>
+</div>
+
+<script type="application/json" id="keymap-data">{
+  "layout": "LAYOUT_split_3x5_3",
+  "geometry": [
+    {
+      "x": 0,
+      "y": 0.3,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 1,
+      "y": 0.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 3,
+      "y": 0.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 4,
+      "y": 0.2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 8,
+      "y": 0.2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 9,
+      "y": 0.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 10,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 11,
+      "y": 0.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 12,
+      "y": 0.3,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 0,
+      "y": 1.3,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 1,
+      "y": 1.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 3,
+      "y": 1.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 4,
+      "y": 1.2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 8,
+      "y": 1.2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 9,
+      "y": 1.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 10,
+      "y": 1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 11,
+      "y": 1.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 12,
+      "y": 1.3,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 0,
+      "y": 2.3,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 1,
+      "y": 2.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 3,
+      "y": 2.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 4,
+      "y": 2.2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 8,
+      "y": 2.2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 9,
+      "y": 2.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 10,
+      "y": 2,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 11,
+      "y": 2.1,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 12,
+      "y": 2.3,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 3,
+      "y": 3.7,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 4,
+      "y": 3.7,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 5,
+      "y": 3.2,
+      "w": 1,
+      "h": 1.5
+    },
+    {
+      "x": 7,
+      "y": 3.2,
+      "w": 1,
+      "h": 1.5
+    },
+    {
+      "x": 8,
+      "y": 3.7,
+      "w": 1,
+      "h": 1
+    },
+    {
+      "x": 9,
+      "y": 3.7,
+      "w": 1,
+      "h": 1
+    }
+  ],
+  "groups": [
+    {
+      "id": "base",
+      "title": "Base",
+      "short": "BASE",
+      "shared": false,
+      "prose": "QWERTY with the outer pinky columns removed. The home row doubles as modifiers.",
+      "osDiff": [
+        11,
+        13,
+        16,
+        18,
+        31,
+        34
+      ],
+      "access": [],
+      "keys": {
+        "mac": {
+          "layer": "_MAC",
+          "keys": [
+            {
+              "i": 0,
+              "src": "KC_Q",
+              "expanded": null,
+              "tap": {
+                "label": "Q",
+                "desc": "Q"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 1,
+              "src": "KC_W",
+              "expanded": null,
+              "tap": {
+                "label": "W",
+                "desc": "W"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "KC_E",
+              "expanded": null,
+              "tap": {
+                "label": "E",
+                "desc": "E"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "KC_R",
+              "expanded": null,
+              "tap": {
+                "label": "R",
+                "desc": "R"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "KC_T",
+              "expanded": null,
+              "tap": {
+                "label": "T",
+                "desc": "T"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "KC_Y",
+              "expanded": null,
+              "tap": {
+                "label": "Y",
+                "desc": "Y"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "KC_U",
+              "expanded": null,
+              "tap": {
+                "label": "U",
+                "desc": "U"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "KC_I",
+              "expanded": null,
+              "tap": {
+                "label": "I",
+                "desc": "I"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "KC_O",
+              "expanded": null,
+              "tap": {
+                "label": "O",
+                "desc": "O"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "KC_P",
+              "expanded": null,
+              "tap": {
+                "label": "P",
+                "desc": "P"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "KC_A",
+              "expanded": null,
+              "tap": {
+                "label": "A",
+                "desc": "A"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "LCTL_T(KC_S)",
+              "expanded": null,
+              "tap": {
+                "label": "S",
+                "desc": "S"
+              },
+              "hold": {
+                "label": "⌃",
+                "desc": "Left Control"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "LALT_T(KC_D)",
+              "expanded": null,
+              "tap": {
+                "label": "D",
+                "desc": "D"
+              },
+              "hold": {
+                "label": "⌥",
+                "desc": "Left Option"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "LGUI_T(KC_F)",
+              "expanded": null,
+              "tap": {
+                "label": "F",
+                "desc": "F"
+              },
+              "hold": {
+                "label": "⌘",
+                "desc": "Left Command"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "KC_G",
+              "expanded": null,
+              "tap": {
+                "label": "G",
+                "desc": "G"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "KC_H",
+              "expanded": null,
+              "tap": {
+                "label": "H",
+                "desc": "H"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "RGUI_T(KC_J)",
+              "expanded": null,
+              "tap": {
+                "label": "J",
+                "desc": "J"
+              },
+              "hold": {
+                "label": "⌘",
+                "desc": "Right Command"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "RALT_T(KC_K)",
+              "expanded": null,
+              "tap": {
+                "label": "K",
+                "desc": "K"
+              },
+              "hold": {
+                "label": "⌥",
+                "desc": "Right Option"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "RCTL_T(KC_L)",
+              "expanded": null,
+              "tap": {
+                "label": "L",
+                "desc": "L"
+              },
+              "hold": {
+                "label": "⌃",
+                "desc": "Right Control"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "KC_SCLN",
+              "expanded": null,
+              "tap": {
+                "label": ";",
+                "desc": "Semicolon — shifted, colon"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "KC_Z",
+              "expanded": null,
+              "tap": {
+                "label": "Z",
+                "desc": "Z"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "KC_X",
+              "expanded": null,
+              "tap": {
+                "label": "X",
+                "desc": "X"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "KC_C",
+              "expanded": null,
+              "tap": {
+                "label": "C",
+                "desc": "C"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "KC_V",
+              "expanded": null,
+              "tap": {
+                "label": "V",
+                "desc": "V"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "KC_B",
+              "expanded": null,
+              "tap": {
+                "label": "B",
+                "desc": "B"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "KC_N",
+              "expanded": null,
+              "tap": {
+                "label": "N",
+                "desc": "N"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "KC_M",
+              "expanded": null,
+              "tap": {
+                "label": "M",
+                "desc": "M"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "KC_COMM",
+              "expanded": null,
+              "tap": {
+                "label": ",",
+                "desc": "Comma — shifted, less-than"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "KC_DOT",
+              "expanded": null,
+              "tap": {
+                "label": ".",
+                "desc": "Full stop — shifted, greater-than"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "KC_QUOT",
+              "expanded": null,
+              "tap": {
+                "label": "'",
+                "desc": "Apostrophe — shifted, double quote"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "KC_LBRC",
+              "expanded": null,
+              "tap": {
+                "label": "[",
+                "desc": "Left bracket — shifted, left brace"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "M_SPC",
+              "expanded": "LT(_NAV_MAC,KC_SPC)",
+              "tap": {
+                "label": "Space",
+                "desc": "Space"
+              },
+              "hold": {
+                "label": "NAV",
+                "desc": "NAV layer"
+              },
+              "cat": "layer-tap",
+              "flags": [],
+              "target": "_NAV_MAC",
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "SC_LSPO",
+              "expanded": null,
+              "tap": {
+                "label": "(",
+                "desc": "Open parenthesis"
+              },
+              "hold": {
+                "label": "⇧",
+                "desc": "Left Shift"
+              },
+              "cat": "space-cadet",
+              "flags": [],
+              "note": "Space cadet: Shift when held, an opening parenthesis when tapped on its own."
+            },
+            {
+              "i": 33,
+              "src": "SC_RSPC",
+              "expanded": null,
+              "tap": {
+                "label": ")",
+                "desc": "Close parenthesis"
+              },
+              "hold": {
+                "label": "⇧",
+                "desc": "Right Shift"
+              },
+              "cat": "space-cadet",
+              "flags": [],
+              "note": "Space cadet: Shift when held, a closing parenthesis when tapped on its own."
+            },
+            {
+              "i": 34,
+              "src": "M_ENT",
+              "expanded": "LT(_NUM_MAC,KC_ENT)",
+              "tap": {
+                "label": "Enter",
+                "desc": "Enter"
+              },
+              "hold": {
+                "label": "NUM",
+                "desc": "NUM layer"
+              },
+              "cat": "layer-tap",
+              "flags": [],
+              "target": "_NUM_MAC",
+              "note": null
+            },
+            {
+              "i": 35,
+              "src": "KC_RBRC",
+              "expanded": null,
+              "tap": {
+                "label": "]",
+                "desc": "Right bracket — shifted, right brace"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            }
+          ]
+        },
+        "linux": {
+          "layer": "_LINUX",
+          "keys": [
+            {
+              "i": 0,
+              "src": "KC_Q",
+              "expanded": null,
+              "tap": {
+                "label": "Q",
+                "desc": "Q"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 1,
+              "src": "KC_W",
+              "expanded": null,
+              "tap": {
+                "label": "W",
+                "desc": "W"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "KC_E",
+              "expanded": null,
+              "tap": {
+                "label": "E",
+                "desc": "E"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "KC_R",
+              "expanded": null,
+              "tap": {
+                "label": "R",
+                "desc": "R"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "KC_T",
+              "expanded": null,
+              "tap": {
+                "label": "T",
+                "desc": "T"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "KC_Y",
+              "expanded": null,
+              "tap": {
+                "label": "Y",
+                "desc": "Y"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "KC_U",
+              "expanded": null,
+              "tap": {
+                "label": "U",
+                "desc": "U"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "KC_I",
+              "expanded": null,
+              "tap": {
+                "label": "I",
+                "desc": "I"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "KC_O",
+              "expanded": null,
+              "tap": {
+                "label": "O",
+                "desc": "O"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "KC_P",
+              "expanded": null,
+              "tap": {
+                "label": "P",
+                "desc": "P"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "KC_A",
+              "expanded": null,
+              "tap": {
+                "label": "A",
+                "desc": "A"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "LGUI_T(KC_S)",
+              "expanded": null,
+              "tap": {
+                "label": "S",
+                "desc": "S"
+              },
+              "hold": {
+                "label": "Super",
+                "desc": "Left Super"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "LALT_T(KC_D)",
+              "expanded": null,
+              "tap": {
+                "label": "D",
+                "desc": "D"
+              },
+              "hold": {
+                "label": "Alt",
+                "desc": "Left Alt"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "LCTL_T(KC_F)",
+              "expanded": null,
+              "tap": {
+                "label": "F",
+                "desc": "F"
+              },
+              "hold": {
+                "label": "Ctrl",
+                "desc": "Left Control"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "KC_G",
+              "expanded": null,
+              "tap": {
+                "label": "G",
+                "desc": "G"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "KC_H",
+              "expanded": null,
+              "tap": {
+                "label": "H",
+                "desc": "H"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "RCTL_T(KC_J)",
+              "expanded": null,
+              "tap": {
+                "label": "J",
+                "desc": "J"
+              },
+              "hold": {
+                "label": "Ctrl",
+                "desc": "Right Control"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "RALT_T(KC_K)",
+              "expanded": null,
+              "tap": {
+                "label": "K",
+                "desc": "K"
+              },
+              "hold": {
+                "label": "Alt",
+                "desc": "Right Alt"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "RGUI_T(KC_L)",
+              "expanded": null,
+              "tap": {
+                "label": "L",
+                "desc": "L"
+              },
+              "hold": {
+                "label": "Super",
+                "desc": "Right Super"
+              },
+              "cat": "mod-tap",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "KC_SCLN",
+              "expanded": null,
+              "tap": {
+                "label": ";",
+                "desc": "Semicolon — shifted, colon"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "KC_Z",
+              "expanded": null,
+              "tap": {
+                "label": "Z",
+                "desc": "Z"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "KC_X",
+              "expanded": null,
+              "tap": {
+                "label": "X",
+                "desc": "X"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "KC_C",
+              "expanded": null,
+              "tap": {
+                "label": "C",
+                "desc": "C"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "KC_V",
+              "expanded": null,
+              "tap": {
+                "label": "V",
+                "desc": "V"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "KC_B",
+              "expanded": null,
+              "tap": {
+                "label": "B",
+                "desc": "B"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "KC_N",
+              "expanded": null,
+              "tap": {
+                "label": "N",
+                "desc": "N"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "KC_M",
+              "expanded": null,
+              "tap": {
+                "label": "M",
+                "desc": "M"
+              },
+              "hold": null,
+              "cat": "letter",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "KC_COMM",
+              "expanded": null,
+              "tap": {
+                "label": ",",
+                "desc": "Comma — shifted, less-than"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "KC_DOT",
+              "expanded": null,
+              "tap": {
+                "label": ".",
+                "desc": "Full stop — shifted, greater-than"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "KC_QUOT",
+              "expanded": null,
+              "tap": {
+                "label": "'",
+                "desc": "Apostrophe — shifted, double quote"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "KC_LBRC",
+              "expanded": null,
+              "tap": {
+                "label": "[",
+                "desc": "Left bracket — shifted, left brace"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "L_SPC",
+              "expanded": "LT(_NAV_LINUX,KC_SPC)",
+              "tap": {
+                "label": "Space",
+                "desc": "Space"
+              },
+              "hold": {
+                "label": "NAV",
+                "desc": "NAV layer"
+              },
+              "cat": "layer-tap",
+              "flags": [],
+              "target": "_NAV_LINUX",
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "SC_LSPO",
+              "expanded": null,
+              "tap": {
+                "label": "(",
+                "desc": "Open parenthesis"
+              },
+              "hold": {
+                "label": "Shift",
+                "desc": "Left Shift"
+              },
+              "cat": "space-cadet",
+              "flags": [],
+              "note": "Space cadet: Shift when held, an opening parenthesis when tapped on its own."
+            },
+            {
+              "i": 33,
+              "src": "SC_RSPC",
+              "expanded": null,
+              "tap": {
+                "label": ")",
+                "desc": "Close parenthesis"
+              },
+              "hold": {
+                "label": "Shift",
+                "desc": "Right Shift"
+              },
+              "cat": "space-cadet",
+              "flags": [],
+              "note": "Space cadet: Shift when held, a closing parenthesis when tapped on its own."
+            },
+            {
+              "i": 34,
+              "src": "L_ENT",
+              "expanded": "LT(_NUM_LINUX,KC_ENT)",
+              "tap": {
+                "label": "Enter",
+                "desc": "Enter"
+              },
+              "hold": {
+                "label": "NUM",
+                "desc": "NUM layer"
+              },
+              "cat": "layer-tap",
+              "flags": [],
+              "target": "_NUM_LINUX",
+              "note": null
+            },
+            {
+              "i": 35,
+              "src": "KC_RBRC",
+              "expanded": null,
+              "tap": {
+                "label": "]",
+                "desc": "Right bracket — shifted, right brace"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "num",
+      "title": "Numbers",
+      "short": "NUM",
+      "shared": false,
+      "prose": "Numpad-style digits under the left hand, symbols down the right of it, and the right home row becomes bare modifiers so you can chord them with the digits.",
+      "osDiff": [
+        16,
+        18
+      ],
+      "access": [
+        {
+          "from": "_MAC",
+          "fromLabel": "BASE",
+          "key": 34,
+          "via": "hold",
+          "label": "Enter"
+        },
+        {
+          "from": "_LINUX",
+          "fromLabel": "BASE",
+          "key": 34,
+          "via": "hold",
+          "label": "Enter"
+        }
+      ],
+      "keys": {
+        "mac": {
+          "layer": "_NUM_MAC",
+          "keys": [
+            {
+              "i": 0,
+              "src": "KC_7",
+              "expanded": null,
+              "tap": {
+                "label": "7",
+                "desc": "7"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 1,
+              "src": "KC_8",
+              "expanded": null,
+              "tap": {
+                "label": "8",
+                "desc": "8"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "KC_9",
+              "expanded": null,
+              "tap": {
+                "label": "9",
+                "desc": "9"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "KC_0",
+              "expanded": null,
+              "tap": {
+                "label": "0",
+                "desc": "0"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "KC_GRV",
+              "expanded": null,
+              "tap": {
+                "label": "`",
+                "desc": "Backtick — shifted, tilde"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "KC_4",
+              "expanded": null,
+              "tap": {
+                "label": "4",
+                "desc": "4"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "KC_5",
+              "expanded": null,
+              "tap": {
+                "label": "5",
+                "desc": "5"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "KC_6",
+              "expanded": null,
+              "tap": {
+                "label": "6",
+                "desc": "6"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "KC_MINS",
+              "expanded": null,
+              "tap": {
+                "label": "-",
+                "desc": "Minus — shifted, underscore"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "KC_BSLS",
+              "expanded": null,
+              "tap": {
+                "label": "\\",
+                "desc": "Backslash — shifted, pipe"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "KC_RSFT",
+              "expanded": null,
+              "tap": {
+                "label": "⇧",
+                "desc": "Right Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "KC_RGUI",
+              "expanded": null,
+              "tap": {
+                "label": "⌘",
+                "desc": "Right Command"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "KC_RALT",
+              "expanded": null,
+              "tap": {
+                "label": "⌥",
+                "desc": "Right Option"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "KC_RCTL",
+              "expanded": null,
+              "tap": {
+                "label": "⌃",
+                "desc": "Right Control"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "KC_1",
+              "expanded": null,
+              "tap": {
+                "label": "1",
+                "desc": "1"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "KC_2",
+              "expanded": null,
+              "tap": {
+                "label": "2",
+                "desc": "2"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "KC_3",
+              "expanded": null,
+              "tap": {
+                "label": "3",
+                "desc": "3"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "KC_EQL",
+              "expanded": null,
+              "tap": {
+                "label": "=",
+                "desc": "Equals — shifted, plus"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "KC_SLSH",
+              "expanded": null,
+              "tap": {
+                "label": "/",
+                "desc": "Slash — shifted, question mark"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "KC_LSFT",
+              "expanded": null,
+              "tap": {
+                "label": "⇧",
+                "desc": "Left Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 33,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 34,
+              "src": "_______",
+              "expanded": null,
+              "cat": "transparent",
+              "tap": {
+                "label": "Enter",
+                "desc": "Enter"
+              },
+              "hold": {
+                "label": "NUM",
+                "desc": "NUM layer"
+              },
+              "resolvedFrom": {
+                "layer": "_MAC",
+                "src": "M_ENT",
+                "cat": "layer-tap"
+              },
+              "note": null
+            },
+            {
+              "i": 35,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            }
+          ]
+        },
+        "linux": {
+          "layer": "_NUM_LINUX",
+          "keys": [
+            {
+              "i": 0,
+              "src": "KC_7",
+              "expanded": null,
+              "tap": {
+                "label": "7",
+                "desc": "7"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 1,
+              "src": "KC_8",
+              "expanded": null,
+              "tap": {
+                "label": "8",
+                "desc": "8"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "KC_9",
+              "expanded": null,
+              "tap": {
+                "label": "9",
+                "desc": "9"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "KC_0",
+              "expanded": null,
+              "tap": {
+                "label": "0",
+                "desc": "0"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "KC_GRV",
+              "expanded": null,
+              "tap": {
+                "label": "`",
+                "desc": "Backtick — shifted, tilde"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "KC_4",
+              "expanded": null,
+              "tap": {
+                "label": "4",
+                "desc": "4"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "KC_5",
+              "expanded": null,
+              "tap": {
+                "label": "5",
+                "desc": "5"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "KC_6",
+              "expanded": null,
+              "tap": {
+                "label": "6",
+                "desc": "6"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "KC_MINS",
+              "expanded": null,
+              "tap": {
+                "label": "-",
+                "desc": "Minus — shifted, underscore"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "KC_BSLS",
+              "expanded": null,
+              "tap": {
+                "label": "\\",
+                "desc": "Backslash — shifted, pipe"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "KC_RSFT",
+              "expanded": null,
+              "tap": {
+                "label": "Shift",
+                "desc": "Right Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "KC_RCTL",
+              "expanded": null,
+              "tap": {
+                "label": "Ctrl",
+                "desc": "Right Control"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "KC_RALT",
+              "expanded": null,
+              "tap": {
+                "label": "Alt",
+                "desc": "Right Alt"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "KC_RGUI",
+              "expanded": null,
+              "tap": {
+                "label": "Super",
+                "desc": "Right Super"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "KC_1",
+              "expanded": null,
+              "tap": {
+                "label": "1",
+                "desc": "1"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "KC_2",
+              "expanded": null,
+              "tap": {
+                "label": "2",
+                "desc": "2"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "KC_3",
+              "expanded": null,
+              "tap": {
+                "label": "3",
+                "desc": "3"
+              },
+              "hold": null,
+              "cat": "number",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "KC_EQL",
+              "expanded": null,
+              "tap": {
+                "label": "=",
+                "desc": "Equals — shifted, plus"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "KC_SLSH",
+              "expanded": null,
+              "tap": {
+                "label": "/",
+                "desc": "Slash — shifted, question mark"
+              },
+              "hold": null,
+              "cat": "punct",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "KC_LSFT",
+              "expanded": null,
+              "tap": {
+                "label": "Shift",
+                "desc": "Left Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 33,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 34,
+              "src": "_______",
+              "expanded": null,
+              "cat": "transparent",
+              "tap": {
+                "label": "Enter",
+                "desc": "Enter"
+              },
+              "hold": {
+                "label": "NUM",
+                "desc": "NUM layer"
+              },
+              "resolvedFrom": {
+                "layer": "_LINUX",
+                "src": "L_ENT",
+                "cat": "layer-tap"
+              },
+              "note": null
+            },
+            {
+              "i": 35,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nav",
+      "title": "Nav",
+      "short": "NAV",
+      "shared": false,
+      "prose": "Arrows under the right index/middle/ring, editing keys below them, and bare modifiers on the left home row to combine with those arrows.",
+      "osDiff": [
+        11,
+        13,
+        15,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "access": [
+        {
+          "from": "_MAC",
+          "fromLabel": "BASE",
+          "key": 31,
+          "via": "hold",
+          "label": "Space"
+        },
+        {
+          "from": "_LINUX",
+          "fromLabel": "BASE",
+          "key": 31,
+          "via": "hold",
+          "label": "Space"
+        }
+      ],
+      "keys": {
+        "mac": {
+          "layer": "_NAV_MAC",
+          "keys": [
+            {
+              "i": 0,
+              "src": "OS_SWAP",
+              "expanded": null,
+              "tap": {
+                "label": "OS SWAP",
+                "desc": "OS_SWAP"
+              },
+              "hold": null,
+              "cat": "custom",
+              "flags": [],
+              "note": "OS_SWAP. Flips the default layer between Mac and Linux and writes it to EEPROM, so it survives unplugging. This key is the only way to switch, and it exists only here on the Nav layer. The OLED shows which mode you are in."
+            },
+            {
+              "i": 1,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "KC_TAB",
+              "expanded": null,
+              "tap": {
+                "label": "Tab",
+                "desc": "Tab"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "KC_BSPC",
+              "expanded": null,
+              "tap": {
+                "label": "Bksp",
+                "desc": "Backspace"
+              },
+              "hold": null,
+              "cat": "whitespace",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "KC_UP",
+              "expanded": null,
+              "tap": {
+                "label": "↑",
+                "desc": "Up arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "KC_DEL",
+              "expanded": null,
+              "tap": {
+                "label": "Del",
+                "desc": "Forward delete"
+              },
+              "hold": null,
+              "cat": "whitespace",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "KC_ESC",
+              "expanded": null,
+              "tap": {
+                "label": "Esc",
+                "desc": "Escape"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "KC_LCTL",
+              "expanded": null,
+              "tap": {
+                "label": "⌃",
+                "desc": "Left Control"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "KC_LALT",
+              "expanded": null,
+              "tap": {
+                "label": "⌥",
+                "desc": "Left Option"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "KC_LGUI",
+              "expanded": null,
+              "tap": {
+                "label": "⌘",
+                "desc": "Left Command"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "KC_LSFT",
+              "expanded": null,
+              "tap": {
+                "label": "⇧",
+                "desc": "Left Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "G(KC_TAB)",
+              "expanded": null,
+              "tap": {
+                "label": "⌘Tab",
+                "desc": "Command + Tab"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "KC_LEFT",
+              "expanded": null,
+              "tap": {
+                "label": "←",
+                "desc": "Left arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "KC_DOWN",
+              "expanded": null,
+              "tap": {
+                "label": "↓",
+                "desc": "Down arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "KC_RGHT",
+              "expanded": null,
+              "tap": {
+                "label": "→",
+                "desc": "Right arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "G(KC_Z)",
+              "expanded": null,
+              "tap": {
+                "label": "⌘Z",
+                "desc": "Command + Z"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "G(KC_X)",
+              "expanded": null,
+              "tap": {
+                "label": "⌘X",
+                "desc": "Command + X"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "G(KC_C)",
+              "expanded": null,
+              "tap": {
+                "label": "⌘C",
+                "desc": "Command + C"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "G(KC_V)",
+              "expanded": null,
+              "tap": {
+                "label": "⌘V",
+                "desc": "Command + V"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "G(KC_F)",
+              "expanded": null,
+              "tap": {
+                "label": "⌘F",
+                "desc": "Command + F"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "_______",
+              "expanded": null,
+              "cat": "transparent",
+              "tap": {
+                "label": "Space",
+                "desc": "Space"
+              },
+              "hold": {
+                "label": "NAV",
+                "desc": "NAV layer"
+              },
+              "resolvedFrom": {
+                "layer": "_MAC",
+                "src": "M_SPC",
+                "cat": "layer-tap"
+              },
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 33,
+              "src": "KC_RSFT",
+              "expanded": null,
+              "tap": {
+                "label": "⇧",
+                "desc": "Right Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 34,
+              "src": "TG(_TMUX)",
+              "expanded": null,
+              "tap": {
+                "label": "TMUX",
+                "desc": "toggle the TMUX layer on or off"
+              },
+              "hold": null,
+              "cat": "layer-toggle",
+              "flags": [],
+              "target": "_TMUX",
+              "note": "Toggles the Tmux layer ON. It stays on until you tap this same key again — it is TG(), not a hold — and the OLED prints TMUX while it is active."
+            },
+            {
+              "i": 35,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            }
+          ]
+        },
+        "linux": {
+          "layer": "_NAV_LINUX",
+          "keys": [
+            {
+              "i": 0,
+              "src": "OS_SWAP",
+              "expanded": null,
+              "tap": {
+                "label": "OS SWAP",
+                "desc": "OS_SWAP"
+              },
+              "hold": null,
+              "cat": "custom",
+              "flags": [],
+              "note": "OS_SWAP. Flips the default layer between Mac and Linux and writes it to EEPROM, so it survives unplugging. This key is the only way to switch, and it exists only here on the Nav layer. The OLED shows which mode you are in."
+            },
+            {
+              "i": 1,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "KC_TAB",
+              "expanded": null,
+              "tap": {
+                "label": "Tab",
+                "desc": "Tab"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "KC_BSPC",
+              "expanded": null,
+              "tap": {
+                "label": "Bksp",
+                "desc": "Backspace"
+              },
+              "hold": null,
+              "cat": "whitespace",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "KC_UP",
+              "expanded": null,
+              "tap": {
+                "label": "↑",
+                "desc": "Up arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "KC_DEL",
+              "expanded": null,
+              "tap": {
+                "label": "Del",
+                "desc": "Forward delete"
+              },
+              "hold": null,
+              "cat": "whitespace",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "KC_ESC",
+              "expanded": null,
+              "tap": {
+                "label": "Esc",
+                "desc": "Escape"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "KC_LGUI",
+              "expanded": null,
+              "tap": {
+                "label": "Super",
+                "desc": "Left Super"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "KC_LALT",
+              "expanded": null,
+              "tap": {
+                "label": "Alt",
+                "desc": "Left Alt"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "KC_LCTL",
+              "expanded": null,
+              "tap": {
+                "label": "Ctrl",
+                "desc": "Left Control"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "KC_LSFT",
+              "expanded": null,
+              "tap": {
+                "label": "Shift",
+                "desc": "Left Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "C(KC_TAB)",
+              "expanded": null,
+              "tap": {
+                "label": "CtrlTab",
+                "desc": "Control + Tab"
+              },
+              "hold": null,
+              "cat": "mod-combo",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "KC_LEFT",
+              "expanded": null,
+              "tap": {
+                "label": "←",
+                "desc": "Left arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "KC_DOWN",
+              "expanded": null,
+              "tap": {
+                "label": "↓",
+                "desc": "Down arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "KC_RGHT",
+              "expanded": null,
+              "tap": {
+                "label": "→",
+                "desc": "Right arrow"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "KC_UNDO",
+              "expanded": null,
+              "tap": {
+                "label": "Undo",
+                "desc": "Undo — the dedicated key, not Ctrl-Z"
+              },
+              "hold": null,
+              "cat": "editing",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "KC_CUT",
+              "expanded": null,
+              "tap": {
+                "label": "Cut",
+                "desc": "Cut — the dedicated key, not Ctrl-X"
+              },
+              "hold": null,
+              "cat": "editing",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "KC_COPY",
+              "expanded": null,
+              "tap": {
+                "label": "Copy",
+                "desc": "Copy — the dedicated key, not Ctrl-C"
+              },
+              "hold": null,
+              "cat": "editing",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "KC_PASTE",
+              "expanded": null,
+              "tap": {
+                "label": "Paste",
+                "desc": "Paste — the dedicated key, not Ctrl-V"
+              },
+              "hold": null,
+              "cat": "editing",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "KC_FIND",
+              "expanded": null,
+              "tap": {
+                "label": "Find",
+                "desc": "Find — the dedicated key, not Ctrl-F"
+              },
+              "hold": null,
+              "cat": "editing",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "_______",
+              "expanded": null,
+              "cat": "transparent",
+              "tap": {
+                "label": "Space",
+                "desc": "Space"
+              },
+              "hold": {
+                "label": "NAV",
+                "desc": "NAV layer"
+              },
+              "resolvedFrom": {
+                "layer": "_LINUX",
+                "src": "L_SPC",
+                "cat": "layer-tap"
+              },
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 33,
+              "src": "KC_RSFT",
+              "expanded": null,
+              "tap": {
+                "label": "Shift",
+                "desc": "Right Shift"
+              },
+              "hold": null,
+              "cat": "modifier",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 34,
+              "src": "TG(_TMUX)",
+              "expanded": null,
+              "tap": {
+                "label": "TMUX",
+                "desc": "toggle the TMUX layer on or off"
+              },
+              "hold": null,
+              "cat": "layer-toggle",
+              "flags": [],
+              "target": "_TMUX",
+              "note": "Toggles the Tmux layer ON. It stays on until you tap this same key again — it is TG(), not a hold — and the OLED prints TMUX while it is active."
+            },
+            {
+              "i": 35,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tmux",
+      "title": "Tmux",
+      "short": "TMUX",
+      "shared": true,
+      "prose": "A toggle, not a hold. Almost every key is dead while it is on.",
+      "osDiff": [],
+      "access": [
+        {
+          "from": "_NAV_MAC",
+          "fromLabel": "NAV",
+          "key": 34,
+          "via": "tap",
+          "label": "TMUX"
+        },
+        {
+          "from": "_NAV_LINUX",
+          "fromLabel": "NAV",
+          "key": 34,
+          "via": "tap",
+          "label": "TMUX"
+        },
+        {
+          "from": "_TMUX",
+          "fromLabel": "TMUX",
+          "key": 34,
+          "via": "tap",
+          "label": "TMUX"
+        }
+      ],
+      "keys": {
+        "mac": {
+          "layer": "_TMUX",
+          "keys": [
+            {
+              "i": 0,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 1,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "KC_PGUP",
+              "expanded": null,
+              "tap": {
+                "label": "PgUp",
+                "desc": "Page up"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "KC_PGDN",
+              "expanded": null,
+              "tap": {
+                "label": "PgDn",
+                "desc": "Page down"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 33,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 34,
+              "src": "TG(_TMUX)",
+              "expanded": null,
+              "tap": {
+                "label": "TMUX",
+                "desc": "toggle the TMUX layer on or off"
+              },
+              "hold": null,
+              "cat": "layer-toggle",
+              "flags": [],
+              "target": "_TMUX",
+              "note": "Toggles the Tmux layer back OFF. This is the only live key that gets you out, so it is worth memorising its position."
+            },
+            {
+              "i": 35,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            }
+          ]
+        },
+        "linux": {
+          "layer": "_TMUX",
+          "keys": [
+            {
+              "i": 0,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 1,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 2,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 3,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 4,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 5,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 6,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 7,
+              "src": "KC_PGUP",
+              "expanded": null,
+              "tap": {
+                "label": "PgUp",
+                "desc": "Page up"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 8,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 9,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 10,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 11,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 12,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 13,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 14,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 15,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 16,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 17,
+              "src": "KC_PGDN",
+              "expanded": null,
+              "tap": {
+                "label": "PgDn",
+                "desc": "Page down"
+              },
+              "hold": null,
+              "cat": "nav",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 18,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 19,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 20,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 21,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 22,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 23,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 24,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 25,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 26,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 27,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 28,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 29,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 30,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 31,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 32,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 33,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            },
+            {
+              "i": 34,
+              "src": "TG(_TMUX)",
+              "expanded": null,
+              "tap": {
+                "label": "TMUX",
+                "desc": "toggle the TMUX layer on or off"
+              },
+              "hold": null,
+              "cat": "layer-toggle",
+              "flags": [],
+              "target": "_TMUX",
+              "note": "Toggles the Tmux layer back OFF. This is the only live key that gets you out, so it is worth memorising its position."
+            },
+            {
+              "i": 35,
+              "src": "XXXXXXX",
+              "expanded": null,
+              "tap": null,
+              "hold": null,
+              "cat": "blocked",
+              "flags": [],
+              "note": null
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "meta": {
+    "tappingTerm": 200,
+    "tappingTermNote": "QMK default — config.h leaves TAPPING_TERM commented out. Hold a home-row key past 200 ms and you get the modifier; release sooner and you get the letter.",
+    "tapFlavour": "No PERMISSIVE_HOLD, HOLD_ON_OTHER_KEY_PRESS or QUICK_TAP_TERM are set, so a fast roll across the home row resolves as taps rather than firing a modifier.",
+    "configFlags": [
+      "SPLIT_LAYER_STATE_ENABLE",
+      "BOTH_SHIFTS_TURNS_ON_CAPS_WORD"
+    ],
+    "rules": [
+      "OLED_ENABLE",
+      "CAPS_WORD_ENABLE"
+    ]
+  },
+  "chords": [
+    {
+      "title": "Caps Word",
+      "keys": [
+        32,
+        33
+      ],
+      "group": "base",
+      "body": "Press both thumb shifts together to enter Caps Word: the next word types in capitals and it switches itself off at the first space or punctuation. Set by BOTH_SHIFTS_TURNS_ON_CAPS_WORD in config.h — there is no entry for it in the keymap, so it is invisible in the source. The OLED prints CAPS while it is on."
+    }
+  ],
+  "behaviours": [
+    {
+      "title": "The OLED",
+      "body": "The master half prints four lines: the label OS, then MAC or LINUX, then TMUX when that layer is toggled on, then CAPS when Caps Word is active. Blank lines mean neither is on."
+    },
+    {
+      "title": "Why every layer exists twice",
+      "body": "Mac and Linux differ in only three places: the order of the home-row modifiers, the Nav layer bottom row (Mac sends Command+Z/X/C/V/F, Linux sends the dedicated Undo/Cut/Copy/Paste/Find keys), and a Ctrl/Super swap on the Numbers home row. Use the \"differs by OS\" toggle to see exactly which keys."
+    }
+  ],
+  "provenance": {
+    "keymap": "518b47a00087",
+    "annotations": "033df04c5b17"
+  }
+}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('keymap-data').textContent);
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  group: DATA.groups[0].id,
+  os: 'mac',
+  pinned: null,
+  hovered: null,
+  showDiff: false,
+  showGhost: false,
+};
+
+const groupById = (id) => DATA.groups.find((g) => g.id === id);
+const baseGroup = DATA.groups[0];
+const currentGroup = () => groupById(state.group);
+const keysOf = (group, os) => group.keys[group.shared ? 'mac' : os].keys;
+
+/* ---------- board geometry ---------- */
+const U = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'));
+
+function layoutBoard() {
+  const u = U();
+  const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap'));
+  const board = $('board');
+  const width = Math.max(...DATA.geometry.map((g) => g.x + g.w));
+  const height = Math.max(...DATA.geometry.map((g) => g.y + g.h));
+  board.style.width = width * u + 'px';
+  board.style.height = height * u + 'px';
+  board.querySelectorAll('.key').forEach((el, i) => {
+    const g = DATA.geometry[i];
+    el.style.left = g.x * u + 'px';
+    el.style.top = g.y * u + 'px';
+    el.style.width = g.w * u - gap + 'px';
+    el.style.height = g.h * u - gap + 'px';
+  });
+}
+
+/* ---------- rendering ---------- */
+function renderControls() {
+  const group = currentGroup();
+
+  $('os-switch').innerHTML = ['mac', 'linux']
+    .map((os) => `<button data-os="${os}" aria-pressed="${state.os === os}"
+        ${group.shared ? 'disabled' : ''}>${os === 'mac' ? 'Mac' : 'Linux'}</button>`)
+    .join('');
+
+  $('layer-tabs').innerHTML = DATA.groups
+    .map((g) => `<button data-group="${g.id}" aria-pressed="${state.group === g.id}">${g.title}</button>`)
+    .join('');
+
+  $('opt-diff').checked = state.showDiff;
+  $('opt-diff').disabled = group.shared || group.osDiff.length === 0;
+  $('opt-ghost').checked = state.showGhost;
+  $('opt-ghost').disabled = group.id === baseGroup.id;
+}
+
+function renderHint() {
+  const group = currentGroup();
+  const parts = [];
+
+  if (group.shared) {
+    parts.push('Identical on Mac and Linux.');
+  } else if (group.osDiff.length) {
+    parts.push(`<b>${group.osDiff.length}</b> keys differ between Mac and Linux.`);
+  }
+
+  // Derived from the keymap, not written down: which key reaches this layer.
+  const access = group.access.filter((a) => group.shared || a.from.endsWith(state.os.toUpperCase()));
+  const path = access[0];
+  if (path) {
+    const verb = path.via === 'hold' ? 'Hold' : 'Tap';
+    parts.unshift(`${verb} <b>${path.label}</b> on the ${path.fromLabel} layer to get here.`);
+  }
+  if (group.prose) parts.push(group.prose);
+
+  $('hint').innerHTML = parts.join(' ');
+
+  const tmuxBanner = group.shared
+    ? `<div class="banner"><b>This layer is a toggle, not a hold.</b> It stays on until you tap
+       the same key again, and everything hatched below is dead while it is. The OLED prints
+       <code>TMUX</code> so you can tell.</div>`
+    : '';
+  $('banner').innerHTML = tmuxBanner;
+}
+
+function renderBoard() {
+  const group = currentGroup();
+  const keys = keysOf(group, state.os);
+  const baseKeys = keysOf(baseGroup, state.os);
+  const diff = new Set(state.showDiff ? group.osDiff : []);
+  const entry = new Set(
+    group.access.filter((a) => a.from === group.keys[group.shared ? 'mac' : state.os].layer).map((a) => a.key)
+  );
+
+  $('board').innerHTML = keys
+    .map((k, i) => {
+      const cls = ['key', k.cat];
+      if (!k.hold) cls.push('no-hold');
+      if (diff.has(i)) cls.push('diff');
+      if (entry.has(i)) cls.push('entry');
+
+      const ghost =
+        state.showGhost && group.id !== baseGroup.id && baseKeys[i].tap
+          ? `<span class="ghost">${esc(baseKeys[i].tap.label)}</span>`
+          : '';
+      const body = k.cat === 'blocked'
+        ? ''
+        : `${ghost}<span class="tap">${esc(k.tap ? k.tap.label : '')}</span>` +
+          (k.hold ? `<span class="hold">${esc(k.hold.label)}</span>` : '');
+
+      return `<button class="${cls.join(' ')}" style="--kc: var(--c-${k.cat})"
+          data-i="${i}" data-pinned="${state.pinned === i}"
+          ${k.cat === 'blocked' ? 'tabindex="-1"' : ''}>${body}</button>`;
+    })
+    .join('');
+
+  layoutBoard();
+}
+
+function renderDetail() {
+  const group = currentGroup();
+  const i = state.hovered ?? state.pinned;
+  const el = $('detail');
+
+  if (i === null || i === undefined) {
+    el.innerHTML = `<h2>Key</h2><p class="empty">Hover a key to see what it does.</p>`;
+    return;
+  }
+
+  const k = keysOf(group, state.os)[i];
+  if (k.cat === 'blocked') {
+    el.innerHTML = `<h2>Key</h2><div class="big">—</div>
+      <p class="empty">Nothing mapped here on this layer. Pressing it does nothing at all.</p>`;
+    return;
+  }
+
+  const rows = [];
+  if (k.tap) rows.push(['Tap', esc(k.tap.desc)]);
+  if (k.hold) rows.push(['Hold', esc(k.hold.desc)]);
+  rows.push(['Source', `<span class="src">${esc(k.src)}${k.expanded ? `<br>= ${esc(k.expanded)}` : ''}</span>`]);
+
+  // Mod-taps and layer-taps are the whole reason the tapping term matters.
+  const timing = (k.cat === 'mod-tap' || k.cat === 'layer-tap' || k.cat === 'space-cadet')
+    ? `<p class="timing">Hold past <b>${DATA.meta.tappingTerm}&nbsp;ms</b> for
+       ${esc(k.hold.label)}; release sooner for ${esc(k.tap ? k.tap.label : 'nothing')}.
+       ${esc(DATA.meta.tapFlavour)}</p>`
+    : '';
+
+  const fallthrough = k.resolvedFrom
+    ? `<p class="timing">This key is transparent — it falls through to
+       <code>${esc(k.resolvedFrom.src)}</code> on <code>${esc(k.resolvedFrom.layer)}</code>,
+       which is how the key you are holding keeps working.</p>`
+    : '';
+
+  el.innerHTML =
+    `<h2>Key</h2>
+     <div class="big" style="--kc: var(--c-${k.cat})">${esc(k.tap ? k.tap.label : k.hold.label)}</div>
+     <span class="chip" style="--kc: var(--c-${k.cat})">${k.cat}</span>
+     <dl>${rows.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>
+     ${timing}${fallthrough}
+     ${k.note ? `<p class="note">${esc(k.note)}</p>` : ''}`;
+}
+
+function renderFooter() {
+  const chords = DATA.chords.map((c) => {
+    const labels = c.keys.map((i) => {
+      const k = keysOf(groupById(c.group), state.os)[i];
+      return k.hold ? k.hold.label : k.tap.label;
+    });
+    return `<div class="card"><h3>${esc(c.title)} <span class="chip">${labels.map(esc).join(' + ')}</span></h3>
+            <p>${esc(c.body)}</p></div>`;
+  });
+  const behaviours = DATA.behaviours.map(
+    (b) => `<div class="card"><h3>${esc(b.title)}</h3><p>${esc(b.body)}</p></div>`
+  );
+  const timing = `<div class="card"><h3>Tap versus hold</h3>
+    <p>${esc(DATA.meta.tappingTermNote)}</p></div>`;
+
+  $('cards').innerHTML = [...chords, timing, ...behaviours].join('');
+
+  const cats = [...new Set(DATA.groups.flatMap((g) =>
+    Object.values(g.keys).flatMap((v) => v.keys.map((k) => k.cat))))]
+    .filter((c) => c !== 'blocked').sort();
+  $('legend').innerHTML = cats
+    .map((c) => `<span style="--kc: var(--c-${c})">${c.replace(/-/g, ' ')}</span>`).join('');
+
+  $('prov').textContent =
+    `Generated from keymap.c @ ${DATA.provenance.keymap} and annotations.mjs @ ` +
+    `${DATA.provenance.annotations}. Rebuild with: node site/build.mjs`;
+}
+
+function render() {
+  renderControls();
+  renderHint();
+  renderBoard();
+  renderDetail();
+  renderFooter();
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* ---------- interaction ---------- */
+$('os-switch').addEventListener('click', (e) => {
+  const os = e.target.dataset?.os;
+  if (os) { state.os = os; render(); }
+});
+$('layer-tabs').addEventListener('click', (e) => {
+  const group = e.target.dataset?.group;
+  if (group) { state.group = group; state.pinned = null; state.hovered = null; render(); }
+});
+$('opt-diff').addEventListener('change', (e) => { state.showDiff = e.target.checked; renderBoard(); });
+$('opt-ghost').addEventListener('change', (e) => { state.showGhost = e.target.checked; renderBoard(); });
+
+$('board').addEventListener('mouseover', (e) => {
+  const key = e.target.closest('.key');
+  if (!key) return;
+  state.hovered = Number(key.dataset.i);
+  renderDetail();
+});
+$('board').addEventListener('mouseleave', () => { state.hovered = null; renderDetail(); });
+$('board').addEventListener('click', (e) => {
+  const key = e.target.closest('.key');
+  if (!key || key.classList.contains('blocked')) return;
+  const i = Number(key.dataset.i);
+  state.pinned = state.pinned === i ? null : i;
+  renderBoard();
+  renderDetail();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const index = Number(e.key) - 1;
+  if (index >= 0 && index < DATA.groups.length) {
+    state.group = DATA.groups[index].id; state.pinned = null; render(); return;
+  }
+  if (e.key === 'm' || e.key === 'l') {
+    if (!currentGroup().shared) { state.os = e.key === 'm' ? 'mac' : 'linux'; render(); }
+  }
+});
+
+window.addEventListener('resize', layoutBoard);
+render();
+</script>
+</body>
+</html>

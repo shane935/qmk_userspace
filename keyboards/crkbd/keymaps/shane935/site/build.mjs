@@ -6,16 +6,24 @@
 // All paths are resolved relative to this file, so the working directory
 // never matters.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 import { parseKeymap, assertKeyCount, ParseError } from './parse.mjs';
+import { decorate, DecorateError } from './decorate.mjs';
+import annotations from './annotations.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 const KEYMAP_C = resolve(here, '../keymap.c');
 const INFO_JSON = resolve(here, '../../../info.json');
+const TEMPLATE = resolve(here, 'template.html');
+const OUTPUT = resolve(here, 'index.html');
+const ANNOTATIONS = resolve(here, 'annotations.mjs');
+
+const DATA_MARKER = '<!--KEYMAP_DATA-->';
 
 /** Reads the crkbd layout table: 36 {matrix, x, y} entries, in keymap.c order. */
 function readLayouts() {
@@ -24,31 +32,78 @@ function readLayouts() {
     return info.layouts;
 }
 
-function main(argv) {
+/** Short content hash, so you can tell whether the page matches keymap.c. */
+function shortHash(path) {
+    return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 12);
+}
+
+/** Builds the data payload and splices it into the template. */
+function render() {
     const layouts = readLayouts();
     const parsed = parseKeymap(KEYMAP_C, Object.keys(layouts));
 
     const geometry = layouts[parsed.layoutMacro].layout;
     assertKeyCount(parsed, geometry.length);
 
+    const data = {
+        layout: parsed.layoutMacro,
+        // x/y carry the column stagger and the split gap; h is set on the two
+        // inner thumbs. Zipped 1:1 with the keymap.c arguments.
+        geometry: geometry.map(({ x, y, w, h }) => ({ x, y, w: w ?? 1, h: h ?? 1 })),
+        ...decorate(parsed, annotations),
+        // No timestamp: it would break byte-determinism and --check with it,
+        // and it would lie about whether the content is current anyway.
+        provenance: {
+            keymap: shortHash(KEYMAP_C),
+            annotations: shortHash(ANNOTATIONS),
+        },
+    };
+
+    const template = readFileSync(TEMPLATE, 'utf8');
+    if (!template.includes(DATA_MARKER)) {
+        throw new ParseError(`template.html is missing its ${DATA_MARKER} marker`);
+    }
+
+    // Inlined as JSON rather than as generated markup, so this file works over
+    // file:// (fetch of a sibling JSON is blocked) and still diffs readably.
+    const json = JSON.stringify(data, null, 2).replace(/</g, '\\u003c');
+    return { html: template.replace(DATA_MARKER, json), data, parsed, geometry };
+}
+
+function main(argv) {
     if (argv.includes('--dump')) {
-        process.stdout.write(JSON.stringify(parsed, null, 2) + '\n');
+        const { data } = render();
+        process.stdout.write(JSON.stringify(data, null, 2) + '\n');
         return;
     }
 
-    // Rendering lands in the next milestone.
+    const { html, parsed, geometry } = render();
+
+    if (argv.includes('--check')) {
+        const current = readFileSync(OUTPUT, 'utf8');
+        if (current !== html) {
+            console.error(
+                'index.html is stale: it does not match keymap.c.\n' +
+                "  run: node keyboards/crkbd/keymaps/shane935/site/build.mjs"
+            );
+            process.exit(1);
+        }
+        console.log('index.html is up to date');
+        return;
+    }
+
+    writeFileSync(OUTPUT, html);
     console.log(
-        `parsed ${parsed.layers.length} layers of ${geometry.length} keys ` +
-        `(${parsed.layoutMacro}) from keymap.c`
+        `wrote index.html — ${parsed.layers.length} layers of ${geometry.length} keys ` +
+        `(${parsed.layoutMacro}), keymap.c @ ${shortHash(KEYMAP_C)}`
     );
-    console.log('nothing to render yet -- run with --dump to inspect the grid');
 }
 
 try {
     main(process.argv.slice(2));
 } catch (error) {
-    if (error instanceof ParseError) {
-        console.error(`keymap.c: ${error.message}`);
+    if (error instanceof ParseError || error instanceof DecorateError) {
+        console.error(`${error.name === 'ParseError' ? 'keymap.c' : 'keymap'}: ${error.message}`);
         process.exit(1);
     }
     throw error;

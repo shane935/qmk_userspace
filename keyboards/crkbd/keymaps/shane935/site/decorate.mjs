@@ -118,7 +118,7 @@ function decode(token, { os, groups, customKeycodes, where }) {
             const inner = decode(args[1], { os, groups, customKeycodes, where });
             return {
                 tap: inner.tap,
-                hold: { label: target, desc: `Hold for the ${target} layer` },
+                hold: { label: target, desc: `${target} layer` },
                 cat: 'layer-tap',
                 flags: [],
                 target: args[0],
@@ -136,7 +136,7 @@ function decode(token, { os, groups, customKeycodes, where }) {
         // MO
         return {
             tap: null,
-            hold: { label: target, desc: `Hold for the ${target} layer` },
+            hold: { label: target, desc: `${target} layer` },
             cat: 'layer-toggle',
             flags: [],
             target: args[0],
@@ -153,7 +153,8 @@ function decodeLayer(layer, context) {
     return layer.expanded.map((token, index) => {
         const where = `[${layer.name}] key ${index}`;
         if (token === '_______' || token === 'KC_TRNS') {
-            return { i: index, src: layer.tokens[index], expanded: token, cat: 'transparent' };
+            // No expansion to show: resolveTransparent fills in what it fires.
+            return { i: index, src: layer.tokens[index], expanded: null, cat: 'transparent' };
         }
         const decoded = decode(token, { ...context, where });
         return {
