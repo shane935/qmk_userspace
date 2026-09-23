@@ -6,7 +6,7 @@
 // All paths are resolved relative to this file, so the working directory
 // never matters.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -80,6 +80,15 @@ function main(argv) {
     const { html, parsed, geometry } = render();
 
     if (argv.includes('--check')) {
+        // index.html is generated, not committed, so a fresh clone won't have
+        // one at all. That is "not built yet", not a crash.
+        if (!existsSync(OUTPUT)) {
+            console.error(
+                'index.html has not been built yet.\n' +
+                '  run: node keyboards/crkbd/keymaps/shane935/site/build.mjs'
+            );
+            process.exit(1);
+        }
         const current = readFileSync(OUTPUT, 'utf8');
         if (current !== html) {
             console.error(

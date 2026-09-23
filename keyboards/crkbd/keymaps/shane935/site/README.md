@@ -11,6 +11,10 @@ node site/build.mjs --dump     # print the parsed data as JSON
 Then open `site/index.html` in a browser. It is self-contained — no server, no
 `npm install`, no network. Nothing here is reachable by a QMK build.
 
+`index.html` is **not committed**: it is ~4k lines of mostly inlined JSON, and
+committing it swamped the diff every time the keymap changed. Build it after
+cloning, and rebuild it after editing `keymap.c`.
+
 ## What is generated and what is written by hand
 
 The `keymaps[]` array is parsed, so the key grid cannot drift. Everything the
@@ -33,7 +37,7 @@ the behaviour changes.
 | `decorate.mjs` | tokens → key objects; transparency, OS diff, access paths |
 | `annotations.mjs` | hand-written prose — **edit this** |
 | `template.html` | markup, CSS and page JS — **edit this** |
-| `index.html` | generated — do not edit |
+| `index.html` | generated, not committed — do not edit |
 
 ## Keeping it honest
 
@@ -44,14 +48,9 @@ Three things stop the page quietly going stale:
 2. **Annotation coverage is enforced.** Any custom keycode, layer toggle or
    space-cadet key without a `keyNotes` entry fails the build, as does a note
    pointing at a key that no longer exists.
-3. **`--check`** byte-compares the committed `index.html` against a fresh build.
+3. **`--check`** byte-compares your built `index.html` against a fresh build, so
+   it catches "I edited the keymap and forgot to rebuild". Output is
+   deterministic — there is no timestamp — so this is reliable.
 
 The footer prints the short hash of `keymap.c` the page was built from, so
 `sha256sum keymap.c` tells you whether it is current.
-
-To have git catch it for you, add to `.git/hooks/pre-commit`:
-
-```sh
-git diff --cached --name-only | grep -q 'shane935/keymap.c' \
-  && node keyboards/crkbd/keymaps/shane935/site/build.mjs --check
-```
