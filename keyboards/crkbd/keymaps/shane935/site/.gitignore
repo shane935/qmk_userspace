@@ -1,4 +1,7 @@
-# QMK's root .gitignore has a bare `index.html` rule for the doxygen output,
-# which would silently swallow the generated reference page. This one is meant
-# to be committed, so you can open it straight from a checkout.
-!index.html
+# The reference page is generated, not committed -- it is ~4k lines of mostly
+# inlined JSON, which swamps a review diff every time the keymap changes.
+# Build it with `node site/build.mjs` after cloning, or after editing keymap.c.
+#
+# QMK's root .gitignore already ignores `index.html` for the doxygen output,
+# but this states the intent locally rather than depending on that rule.
+index.html
