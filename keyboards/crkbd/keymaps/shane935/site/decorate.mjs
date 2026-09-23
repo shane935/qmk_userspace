@@ -238,19 +238,32 @@ function resolveTransparent(keys, chains, byLayer) {
     });
 }
 
-/** Scans every layer for keys that lead to `target`. */
-function accessPaths(layers, target, decodedByLayer, groups) {
+/**
+ * Scans every layer for keys that lead to any of `targets`.
+ *
+ * Both halves of an OS pair are targets at once, because the two halves of the
+ * pair that reaches them hold the same key in the same place and differ only in
+ * which half they point at: M_SPC opens _NAV_MAC and L_SPC opens _NAV_LINUX, off
+ * the same thumb. Those collapse into one entry carrying both layer names, or
+ * the page offers you "hold Space on the BASE layer" twice.
+ */
+function accessPaths(layers, targets, decodedByLayer, groups) {
     const paths = [];
     for (const layer of layers) {
+        const fromLabel = layerLabel(layer.name, groups);
         decodedByLayer[layer.name].forEach((key) => {
-            if (key.target !== target) return;
-            paths.push({
-                from: layer.name,
-                fromLabel: layerLabel(layer.name, groups),
-                key: key.i,
-                via: key.cat === 'layer-tap' ? 'hold' : 'tap',
-                label: key.cat === 'layer-tap' ? key.tap?.label : key.tap?.label,
-            });
+            if (!key.target || !targets.includes(key.target)) return;
+            const via = key.cat === 'layer-tap' ? 'hold' : 'tap';
+            const label = key.tap?.label ?? key.hold?.label ?? null;
+
+            const same = paths.find(
+                (p) => p.key === key.i && p.via === via && p.label === label && p.fromLabel === fromLabel
+            );
+            if (same) {
+                same.from.push(layer.name);
+                return;
+            }
+            paths.push({ from: [layer.name], fromLabel, key: key.i, via, label });
         });
     }
     return paths;
@@ -317,9 +330,7 @@ export function decorate(parsed, annotations) {
                   )
                   .filter((i) => i !== null);
 
-        const access = layerNames.flatMap((name) =>
-            accessPaths(parsed.layers, name, byLayer, groups)
-        );
+        const access = accessPaths(parsed.layers, layerNames, byLayer, groups);
         if (group.id !== base.id && access.length === 0) {
             throw new DecorateError(
                 `no key anywhere reaches ${layerNames.join('/')} -- the ${group.id} layer is unreachable`
@@ -332,6 +343,7 @@ export function decorate(parsed, annotations) {
             short: group.short,
             shared: Boolean(group.shared),
             prose: annotations.groupProse[group.id] ?? null,
+            banner: annotations.groupBanner?.[group.id] ?? null,
             osDiff,
             access,
             keys: Object.fromEntries(

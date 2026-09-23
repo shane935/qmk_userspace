@@ -65,7 +65,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 
 /* ---- controls ---- */
 .controls { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 16px; }
-.seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+/* wraps rather than overflowing: there are seven layer tabs and they are wide */
+.seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .seg button {
   font: inherit; font-size: 13px; padding: 7px 15px; border: 0; cursor: pointer;
   background: transparent; color: var(--ink-soft); border-right: 1px solid var(--line);
@@ -148,7 +149,7 @@ footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px;
 <body>
 <div class="wrap">
   <h1>Corne keymap reference</h1>
-  <p class="sub">Generated from <code>keymap.c</code>. Hover a key for detail, click to pin it. Keys <kbd>1</kbd>–<kbd>4</kbd> switch layer, <kbd>m</kbd>/<kbd>l</kbd> switch OS.</p>
+  <p class="sub">Generated from <code>keymap.c</code>. Hover a key for detail, click to pin it. Keys <kbd>1</kbd>–<kbd id="last-tab"></kbd> switch layer, <kbd>m</kbd>/<kbd>l</kbd> switch OS.</p>
 
   <div class="controls">
     <div class="seg" id="os-switch" role="group" aria-label="Operating system"></div>
@@ -219,6 +220,10 @@ function layoutBoard() {
 function renderControls() {
   const group = currentGroup();
 
+  // The number-key range follows the tab count, so adding a layer cannot leave
+  // the instructions behind.
+  $('last-tab').textContent = DATA.groups.length;
+
   $('os-switch').innerHTML = ['mac', 'linux']
     .map((os) => `<button data-os="${os}" aria-pressed="${state.os === os}"
         ${group.shared ? 'disabled' : ''}>${os === 'mac' ? 'Mac' : 'Linux'}</button>`)
@@ -244,23 +249,25 @@ function renderHint() {
     parts.push(`<b>${group.osDiff.length}</b> keys differ between Mac and Linux.`);
   }
 
-  // Derived from the keymap, not written down: which key reaches this layer.
-  const access = group.access.filter((a) => group.shared || a.from.endsWith(state.os.toUpperCase()));
-  const path = access[0];
-  if (path) {
-    const verb = path.via === 'hold' ? 'Hold' : 'Tap';
-    parts.unshift(`${verb} <b>${path.label}</b> on the ${path.fromLabel} layer to get here.`);
+  // Derived from the keymap, not written down: which keys reach this layer.
+  const access = group.access.filter(
+    (a) => group.shared || a.from.some((layer) => layer.endsWith(state.os.toUpperCase()))
+  );
+  if (access.length) {
+    // Two is enough to be useful; the rest are on the boards themselves.
+    const ways = access.slice(0, 2).map((a, n) => {
+      const verb = a.via === 'hold' ? 'Hold' : 'Tap';
+      return `${n ? verb.toLowerCase() : verb} <b>${esc(a.label)}</b> on the ${esc(a.fromLabel)} layer`;
+    });
+    parts.unshift(`${ways.join(', or ')} to get here.`);
   }
   if (group.prose) parts.push(group.prose);
 
   $('hint').innerHTML = parts.join(' ');
 
-  const tmuxBanner = group.shared
-    ? `<div class="banner"><b>This layer is a toggle, not a hold.</b> It stays on until you tap
-       the same key again, and everything hatched below is dead while it is. The OLED prints
-       <code>TMUX</code> so you can tell.</div>`
+  $('banner').innerHTML = group.banner
+    ? `<div class="banner"><b>${esc(group.banner.title)}</b> ${esc(group.banner.body)}</div>`
     : '';
-  $('banner').innerHTML = tmuxBanner;
 }
 
 function renderBoard() {
@@ -268,9 +275,8 @@ function renderBoard() {
   const keys = keysOf(group, state.os);
   const baseKeys = keysOf(baseGroup, state.os);
   const diff = new Set(state.showDiff ? group.osDiff : []);
-  const entry = new Set(
-    group.access.filter((a) => a.from === group.keys[group.shared ? 'mac' : state.os].layer).map((a) => a.key)
-  );
+  const own = group.keys[group.shared ? 'mac' : state.os].layer;
+  const entry = new Set(group.access.filter((a) => a.from.includes(own)).map((a) => a.key));
 
   $('board').innerHTML = keys
     .map((k, i) => {
