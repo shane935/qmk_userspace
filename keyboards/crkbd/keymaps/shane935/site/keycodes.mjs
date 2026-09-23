@@ -48,6 +48,7 @@ const TABLE = {
     KC_BSLS: punct('\\', 'Backslash — shifted, pipe'),
     KC_MINS: punct('-', 'Minus — shifted, underscore'),
     KC_EQL: punct('=', 'Equals — shifted, plus'),
+    KC_PLUS: punct('+', 'Plus — Equals with Shift already applied'),
     KC_GRV: punct('`', 'Backtick — shifted, tilde'),
     KC_LBRC: punct('[', 'Left bracket — shifted, left brace'),
     KC_RBRC: punct(']', 'Right bracket — shifted, right brace'),

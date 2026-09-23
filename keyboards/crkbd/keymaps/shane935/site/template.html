@@ -105,6 +105,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
   margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--line); width: 76%;
 }
 .key.no-hold .tap { margin-bottom: calc(var(--u) * 0.04); } /* optically centre */
+/* held-only keys -- the tmux thumb modifiers -- have no tap line to sit under */
+.key.no-tap .hold { border-top: 0; padding-top: 0; margin-top: 0; font-size: calc(var(--u) * 0.22); color: var(--kc, var(--ink)); font-weight: 600; }
 
 .key.blocked { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--c-blocked) 4px, var(--c-blocked) 5px); border-left-color: var(--line); cursor: default; }
 .key.transparent .tap { font-style: italic; opacity: 0.75; }
@@ -274,6 +276,7 @@ function renderBoard() {
     .map((k, i) => {
       const cls = ['key', k.cat];
       if (!k.hold) cls.push('no-hold');
+      if (!k.tap) cls.push('no-tap');
       if (diff.has(i)) cls.push('diff');
       if (entry.has(i)) cls.push('entry');
 
@@ -283,7 +286,8 @@ function renderBoard() {
           : '';
       const body = k.cat === 'blocked'
         ? ''
-        : `${ghost}<span class="tap">${esc(k.tap ? k.tap.label : '')}</span>` +
+        : ghost +
+          (k.tap ? `<span class="tap">${esc(k.tap.label)}</span>` : '') +
           (k.hold ? `<span class="hold">${esc(k.hold.label)}</span>` : '');
 
       return `<button class="${cls.join(' ')}" style="--kc: var(--c-${k.cat})"
