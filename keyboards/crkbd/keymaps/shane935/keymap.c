@@ -39,8 +39,6 @@ enum custom_keycodes {
     TP_RSZE,
     TP_SPLT,
     TP_MOVE,
-    TP_JOIN,
-    TP_PICK,
     // WINDOW mode.
     TW_UP,
     TW_DOWN,
@@ -49,13 +47,8 @@ enum custom_keycodes {
     TW_LAST,
     TW_NEW,
     TW_MOVE,
-    TW_RNS,
-    TW_SEND,
-    TW_PICK,
     // TREE mode.
     TT_SEL,
-    TT_CLSE,
-    TT_FLTR,
     // COPY mode.
     TC_UP,
     TC_DOWN,
@@ -65,7 +58,6 @@ enum custom_keycodes {
     TC_PSTE,
     TC_WORD,
     TC_LINE,
-    TC_SRCH,
 };
 
 // Thumbs: space = nav, enter = numbers
@@ -167,11 +159,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // only aliases for Left/Right, which J and L already cover.
     [_TMUX_TREE] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     XXXXXXX,   A(KC_MINS),        KC_UP,   A(KC_PLUS),      TT_CLSE,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     XXXXXXX,   A(KC_MINS),        KC_UP,   A(KC_PLUS),      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      TT_FLTR,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
                                                     XXXXXXX,      XXXXXXX,      XXXXXXX,         XXXXXXX,       TT_SEL,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
@@ -179,11 +171,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_TMUX_WINDOW] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,       TW_RNS,        TW_UP,      XXXXXXX,      TM_DTCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,      XXXXXXX,        TW_UP,      XXXXXXX,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      TW_SEND,      XXXXXXX,      XXXXXXX,      TW_PICK,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
                                                     XXXXXXX,       TW_NEW,      TW_MOVE,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
@@ -195,7 +187,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,       TP_BRK,      XXXXXXX,      TP_JOIN,      TP_PICK,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,       TP_BRK,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
                                                     TP_RSZE,      TP_SPLT,      TP_MOVE,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
@@ -209,7 +201,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      XXXXXXX,                                     S(KC_N),      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      TC_SRCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
                                                     XXXXXXX,      TC_WORD,      TC_LINE,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
@@ -237,22 +229,6 @@ enum tmux_modifier {
     TMOD_LINE,
 };
 static uint8_t tmux_mod = TMOD_NONE;
-
-// Some keys open a tmux prompt, which needs the keyboard back for as long as it
-// is up. The tmux layers come off and the mode waits here until it is over.
-enum tmux_prompt_state {
-    TPROMPT_NONE,
-    TPROMPT_TYPING,
-    // The key that opened a one-key prompt has not been released yet, and its
-    // own release is not the keypress the prompt is waiting for.
-    TPROMPT_ARMING,
-    TPROMPT_ONEKEY,
-};
-static uint8_t tmux_prompt = TPROMPT_NONE;
-static uint8_t tmux_prompt_mode = TMUX_OFF;
-// The layer a one-key prompt turned on to reach the digits, or 0 for none.
-// Layer 0 is _MAC, which is never turned on this way.
-static uint8_t tmux_prompt_layer = 0;
 
 // New panes and windows open where the current pane is.
 #define TMUX_CWD " -c '#{pane_current_path}'"
@@ -318,56 +294,6 @@ static void tmux_pane_arrow(uint16_t arrow, const char *resize, const char *spli
     }
 }
 
-// Drop whatever a prompt was holding on to without restoring the mode, either
-// because the prompt is over or because TMUX_ON is starting again from scratch.
-static void tmux_prompt_cancel(void) {
-    if (tmux_prompt_layer != 0) {
-        layer_off(tmux_prompt_layer);
-        tmux_prompt_layer = 0;
-    }
-    tmux_prompt = TPROMPT_NONE;
-    tmux_prompt_mode = TMUX_OFF;
-}
-
-static void tmux_prompt_done(void) {
-    uint8_t mode = tmux_prompt_mode;
-    tmux_prompt_cancel();
-    tmux_set_mode(mode);
-}
-
-// The tmux prompt wants the whole keyboard, so this hands it over and waits for
-// the user to tap Enter or press Esc.
-static void tmux_typing_prompt(void) {
-    uint8_t mode = tmux_mode;
-    tmux_set_mode(TMUX_OFF);
-    tmux_prompt = TPROMPT_TYPING;
-    tmux_prompt_mode = mode;
-}
-
-// One key goes to tmux and then the mode comes back. PICK needs the digits from
-// the OS's own number layer; the tree's y/n comes off the base layer, so layer
-// is 0 there.
-static void tmux_onekey_prompt(uint8_t layer) {
-    uint8_t mode = tmux_mode;
-    tmux_set_mode(TMUX_OFF);
-    if (layer != 0) {
-        layer_on(layer);
-    }
-    tmux_prompt = TPROMPT_ARMING;
-    tmux_prompt_mode = mode;
-    tmux_prompt_layer = layer;
-}
-
-static uint8_t tmux_num_layer(void) {
-    return get_highest_layer(default_layer_state) == _LINUX ? _NUM_LINUX : _NUM_MAC;
-}
-
-// I and K are the same key under NEW: name the session, create it, switch to it.
-static void tmux_new_session(void) {
-    tmux_cmd(PSTR("command-prompt -p \"new session:\" \"new-session -d -s '%%'" TMUX_CWD " \\; switch-client -t '%%'\""));
-    tmux_typing_prompt();
-}
-
 static void tmux_switch_mode(uint8_t mode) {
     tmux_quit_mode();
     tmux_set_mode(mode);
@@ -399,28 +325,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
     }
 
-    // Prompts end on a release, so that whichever key ended them has already
-    // reached tmux by the time the mode comes back.
-    if (!record->event.pressed && tmux_prompt != TPROMPT_NONE) {
-        switch (tmux_prompt) {
-            case TPROMPT_ARMING:
-                tmux_prompt = TPROMPT_ONEKEY;
-                break;
-            case TPROMPT_ONEKEY:
-                tmux_prompt_done();
-                break;
-            case TPROMPT_TYPING:
-                // Only a tap of Enter counts, not the hold that reaches the
-                // number layer. Anything else the prompt might end with leaves
-                // the keyboard where it is, to be re-entered with nav + T.
-                if (keycode == KC_ESC || ((keycode == M_ENT || keycode == L_ENT) && record->tap.count > 0)) {
-                    tmux_prompt_done();
-                }
-                break;
-        }
-        return true;
-    }
-
     if (!record->event.pressed) {
         return true;
     }
@@ -437,7 +341,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         // Tapping the current mode's own key quits TREE or COPY and falls back
         // to PANE; in PANE and WINDOW there is nothing open to quit.
         case TMUX_ON:
-            tmux_prompt_cancel();
             tmux_set_mode(_TMUX_PANE);
             return false;
         case TM_TREE:
@@ -494,29 +397,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TP_BRK:
             tmux_key(KC_EXLM);
             return false;
-        case TP_JOIN:
-            // The tree carries its own template, so it is opened here rather
-            // than by switching into TREE mode the usual way.
-            tmux_cmd(PSTR("choose-tree -Zw -O activity \"join-pane -h -s '%%'\""));
-            tmux_set_mode(_TMUX_TREE);
-            return false;
-        case TP_PICK:
-            tmux_cmd(PSTR("display-panes -d 0"));
-            tmux_onekey_prompt(tmux_num_layer());
-            return false;
 
-        // MOVE shifts windows, not sessions, so it leaves these two alone.
+        // MOVE leaves the session keys alone, and NEW's new session still needs
+        // the prompt handling, so for now only the bare keys do anything.
         case TW_UP:
-            if (tmux_mod == TMOD_NEW) {
-                tmux_new_session();
-            } else if (tmux_mod == TMOD_NONE) {
+            if (tmux_mod == TMOD_NONE) {
                 tmux_key(KC_LPRN);
             }
             return false;
         case TW_DOWN:
-            if (tmux_mod == TMOD_NEW) {
-                tmux_new_session();
-            } else if (tmux_mod == TMOD_NONE) {
+            if (tmux_mod == TMOD_NONE) {
                 tmux_key(KC_RPRN);
             }
             return false;
@@ -550,49 +440,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TW_LAST:
             tmux_key(KC_L);
             return false;
-        case TW_RNS:
-            // Renaming a session is only reachable under NEW, next to the key
-            // that creates one.
-            if (tmux_mod == TMOD_NEW) {
-                tmux_key(KC_DLR);
-                tmux_typing_prompt();
-            }
-            return false;
-        case TW_SEND:
-            if (tmux_mod == TMOD_NEW) {
-                tmux_key(KC_COMM);
-                tmux_typing_prompt();
-                return false;
-            }
-            // %% is whatever the user picks, so the window being moved has to
-            // be marked before the tree opens. -M first because -m on a pane
-            // that is already marked clears the mark instead of setting it.
-            tmux_cmd(PSTR("select-pane -M ; select-pane -m"));
-            tmux_cmd(PSTR("choose-tree -Zs -O activity \"move-window -s '{marked}' -t '%%:' \\; switch-client -t '%%' \\; select-pane -M\""));
-            tmux_set_mode(_TMUX_TREE);
-            return false;
-        case TW_PICK:
-            // command-prompt -1 rather than prefix and a digit, so that a stray
-            // non-digit cannot fire another prefix binding.
-            tmux_cmd(PSTR("command-prompt -1 -p window \"select-window -t ':%%'\""));
-            tmux_onekey_prompt(tmux_num_layer());
-            return false;
 
         case TT_SEL:
             // The tree's own template decides what choosing an item means, so
             // there is nothing to know here beyond "the tree is now closed".
             tap_code(KC_ENT);
             tmux_set_mode(_TMUX_PANE);
-            return false;
-        case TT_CLSE:
-            // tmux asks to confirm, and y or n comes straight off the base
-            // layer. Closing lives only here; panes go with Ctrl-D.
-            tap_code(KC_X);
-            tmux_onekey_prompt(0);
-            return false;
-        case TT_FLTR:
-            tap_code(KC_F);
-            tmux_typing_prompt();
             return false;
 
         // WORD leaves up and down as they were; only LINE changes all four.
@@ -633,10 +486,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case TC_LINE:
             tmux_mod = (tmux_mod == TMOD_LINE) ? TMOD_NONE : TMOD_LINE;
-            return false;
-        case TC_SRCH:
-            tap_code16(KC_QUES);
-            tmux_typing_prompt();
             return false;
         case TC_COPY:
             // Enter is copy-pipe-and-cancel, so copy mode is already gone.
@@ -696,17 +545,6 @@ bool oled_task_user(void) {
                 break;
             case TMOD_LINE:
                 oled_write_P(PSTR(" LINE"), false);
-                break;
-        }
-        // A prompt has put the mode away, so this is the whole line while one
-        // is up.
-        switch (tmux_prompt) {
-            case TPROMPT_TYPING:
-                oled_write_P(PSTR("PROMPT"), false);
-                break;
-            case TPROMPT_ARMING:
-            case TPROMPT_ONEKEY:
-                oled_write_P(PSTR("PICK"), false);
                 break;
         }
         // Pads out the rest of the line, which is also what clears it when tmux
