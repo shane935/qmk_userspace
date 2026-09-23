@@ -23,10 +23,22 @@ hold-Control, `_______` is resolved to the key it actually falls through to,
 and the Mac-versus-Linux differences are computed by diffing the layer pairs.
 
 What the array does **not** encode is written by hand in `annotations.mjs`:
-`OS_SWAP` (it lives in `process_record_user`), the both-shifts Caps Word chord
-(it lives in `config.h` and has no array entry at all), the 200 ms tapping
-term, and the Tmux layer being a toggle rather than a hold. Edit that file when
-the behaviour changes.
+every custom keycode (they are cases in `process_record_user`, and the array
+shows only the name), the both-shifts Caps Word chord (it lives in `config.h`
+and has no array entry at all), the 200 ms tapping term, and tmux mode being a
+toggle rather than a hold. Edit that file when the behaviour changes.
+
+Custom keycodes go in `customKeys`, keyed by keycode, so a note follows the
+behaviour and shows up wherever the key appears — including where a tmux mode
+layer shows a `_TMUX` key through a transparent one. `keyNotes` is keyed by
+`<group>:<index>` and is for the things that really are about one position:
+the space-cadet shifts, and the plain keys on the tree and copy layers that
+only mean something because tmux is reading them.
+
+Groups may set `under`, the stack of layers they sit on top of. `_TMUX` has no
+tab of its own — tmux mode is never on without exactly one mode layer above it
+— so it is claimed by being stacked under all four modes, and transparency
+resolves through it before falling back to the base layer.
 
 ## Files
 
@@ -45,9 +57,12 @@ Three things stop the page quietly going stale:
 
 1. **The keycode table is closed.** A keycode not in `keycodes.mjs` fails the
    build rather than rendering a blank cap.
-2. **Annotation coverage is enforced.** Any custom keycode, layer toggle or
-   space-cadet key without a `keyNotes` entry fails the build, as does a note
-   pointing at a key that no longer exists.
+2. **Annotation coverage is enforced, both ways.** A custom keycode with no
+   `customKeys` entry fails the build, as does any layer toggle or space-cadet
+   key with no `keyNotes` entry. So does the reverse: a note pointing at a key
+   that no longer exists, or a `customKeys` entry for a keycode `keymap.c` has
+   dropped. A layer no group claims fails too, which is what caught the tmux
+   mode layers.
 3. **`--check`** byte-compares your built `index.html` against a fresh build, so
    it catches "I edited the keymap and forgot to rebuild". Output is
    deterministic — there is no timestamp — so this is reliable.

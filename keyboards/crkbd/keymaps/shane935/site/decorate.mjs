@@ -54,7 +54,7 @@ function layerLabel(name, groups) {
  * Decodes one token into {tap, hold, cat, flags}.
  * `where` is a human-readable location used only in error messages.
  */
-function decode(token, { os, groups, customKeycodes, where }) {
+function decode(token, { os, groups, customKeycodes, customKeys, where }) {
     const plain = lookup(token, os);
     if (plain) return { tap: { label: plain.label, desc: plain.desc }, hold: null, cat: plain.cat, flags: [] };
 
@@ -73,7 +73,26 @@ function decode(token, { os, groups, customKeycodes, where }) {
         };
     }
     if (customKeycodes.includes(token)) {
-        return { tap: { label: token.replace(/_/g, ' '), desc: token }, hold: null, cat: 'custom', flags: [] };
+        // A custom keycode does whatever process_record_user says it does, and
+        // nothing here can read that, so annotations.mjs has to say. Deriving a
+        // label from the name would turn TP_RSZE into "TP RSZE" and claim to
+        // have understood it.
+        const custom = customKeys[token];
+        if (!custom) {
+            throw new DecorateError(
+                `${where}: custom keycode '${token}' has no customKeys entry in annotations.mjs`
+            );
+        }
+        return {
+            tap: custom.label ? { label: custom.label, desc: custom.desc } : null,
+            hold: custom.hold ?? null,
+            cat: 'custom',
+            flags: [],
+            // Only the keys whose job is to open a layer carry a target; the
+            // ones that merely land back on Pane afterwards would otherwise
+            // show up as ways in.
+            ...(custom.target ? { target: custom.target } : {}),
+        };
     }
 
     const call = callParts(token);
@@ -167,17 +186,40 @@ function decodeLayer(layer, context) {
 }
 
 /**
- * Fills in a transparent key from the layer below.
- *
- * Showing a literal KC_TRNS would under-report: the two number-layer thumbs and
- * the two nav-layer thumbs are transparent precisely so the layer key you are
- * already holding keeps working, and that is worth seeing on the page.
+ * Walks down one stack of layers and returns the first that actually maps
+ * `index`, or null if the whole stack is transparent there.
  */
-function resolveTransparent(keys, fallbacks) {
+function resolveThrough(chain, index, byLayer) {
+    for (const layer of chain) {
+        const key = byLayer[layer][index];
+        if (key.cat !== 'transparent') return { layer, key };
+    }
+    return null;
+}
+
+/**
+ * Fills in a transparent key from the layers below it.
+ *
+ * Showing a literal KC_TRNS would under-report twice over: the two number-layer
+ * thumbs and the two nav-layer thumbs are transparent precisely so the layer
+ * key you are already holding keeps working, and the tmux mode layers leave the
+ * mode keys transparent so the ones on _TMUX show through on all four.
+ *
+ * `chains` is one stack per OS, each ordered highest layer first. A shared
+ * layer gets both, and must resolve to the same thing down either.
+ */
+function resolveTransparent(keys, chains, byLayer) {
     return keys.map((key) => {
         if (key.cat !== 'transparent') return key;
 
-        const resolutions = fallbacks.map(({ layer, keys: base }) => ({ layer, key: base[key.i] }));
+        const resolutions = chains.map((chain) => resolveThrough(chain, key.i, byLayer));
+        if (resolutions.some((r) => r === null)) {
+            throw new DecorateError(
+                `key ${key.i} is transparent all the way down (${chains[0].join(' -> ')}), ` +
+                'so nothing says what it fires'
+            );
+        }
+
         const distinct = new Set(resolutions.map((r) => JSON.stringify([r.key.tap, r.key.hold])));
         if (distinct.size !== 1) {
             throw new DecorateError(
@@ -196,19 +238,32 @@ function resolveTransparent(keys, fallbacks) {
     });
 }
 
-/** Scans every layer for keys that lead to `target`. */
-function accessPaths(layers, target, decodedByLayer, groups) {
+/**
+ * Scans every layer for keys that lead to any of `targets`.
+ *
+ * Both halves of an OS pair are targets at once, because the two halves of the
+ * pair that reaches them hold the same key in the same place and differ only in
+ * which half they point at: M_SPC opens _NAV_MAC and L_SPC opens _NAV_LINUX, off
+ * the same thumb. Those collapse into one entry carrying both layer names, or
+ * the page offers you "hold Space on the BASE layer" twice.
+ */
+function accessPaths(layers, targets, decodedByLayer, groups) {
     const paths = [];
     for (const layer of layers) {
+        const fromLabel = layerLabel(layer.name, groups);
         decodedByLayer[layer.name].forEach((key) => {
-            if (key.target !== target) return;
-            paths.push({
-                from: layer.name,
-                fromLabel: layerLabel(layer.name, groups),
-                key: key.i,
-                via: key.cat === 'layer-tap' ? 'hold' : 'tap',
-                label: key.cat === 'layer-tap' ? key.tap?.label : key.tap?.label,
-            });
+            if (!key.target || !targets.includes(key.target)) return;
+            const via = key.cat === 'layer-tap' ? 'hold' : 'tap';
+            const label = key.tap?.label ?? key.hold?.label ?? null;
+
+            const same = paths.find(
+                (p) => p.key === key.i && p.via === via && p.label === label && p.fromLabel === fromLabel
+            );
+            if (same) {
+                same.from.push(layer.name);
+                return;
+            }
+            paths.push({ from: [layer.name], fromLabel, key: key.i, via, label });
         });
     }
     return paths;
@@ -221,42 +276,43 @@ function accessPaths(layers, target, decodedByLayer, groups) {
  * @param {object} annotations hand-written prose and group definitions
  */
 export function decorate(parsed, annotations) {
-    const { groups } = annotations;
+    const { groups, customKeys } = annotations;
+    const roles = layerRoles(groups);
     const byLayer = {};
 
     // Pass one: decode every layer under its own OS, so G() reads as Command on
     // Mac and Super on Linux.
     for (const layer of parsed.layers) {
-        const group = groups.find(
-            (g) => g.mac === layer.name || g.linux === layer.name || g.shared === layer.name
-        );
-        if (!group) {
+        const os = roles.get(layer.name);
+        if (!os) {
             throw new DecorateError(
                 `layer ${layer.name} is not claimed by any group in annotations.mjs`
             );
         }
-        const os = group.linux === layer.name ? 'linux' : 'mac';
         byLayer[layer.name] = decodeLayer(layer, {
             os,
             groups,
             customKeycodes: parsed.customKeycodes,
+            customKeys,
         });
     }
 
-    // Pass two: resolve transparency against the base layers.
+    // Pass two: resolve transparency down each group's stack and then onto the
+    // base layer. The under-layers have no transparency of their own, so the
+    // order groups are visited in cannot matter.
     const base = groups.find((g) => g.id === annotations.baseGroup);
     if (!base) throw new DecorateError(`baseGroup '${annotations.baseGroup}' is not a group`);
 
     for (const group of groups) {
         if (group.id === base.id) continue;
+        const under = [...(group.under ?? [])].reverse();
         for (const [os, layerName] of Object.entries(variantsOf(group))) {
-            const fallbacks = group.shared
-                ? [
-                      { layer: base.mac, keys: byLayer[base.mac] },
-                      { layer: base.linux, keys: byLayer[base.linux] },
-                  ]
-                : [{ layer: base[os], keys: byLayer[base[os]] }];
-            byLayer[layerName] = resolveTransparent(byLayer[layerName], fallbacks);
+            // A shared layer is live under either OS, so it has to agree down
+            // both stacks; an OS-specific one only ever sees its own base.
+            const chains = group.shared
+                ? [[...under, base.mac], [...under, base.linux]]
+                : [[...under, base[os]]];
+            byLayer[layerName] = resolveTransparent(byLayer[layerName], chains, byLayer);
         }
     }
 
@@ -274,9 +330,7 @@ export function decorate(parsed, annotations) {
                   )
                   .filter((i) => i !== null);
 
-        const access = layerNames.flatMap((name) =>
-            accessPaths(parsed.layers, name, byLayer, groups)
-        );
+        const access = accessPaths(parsed.layers, layerNames, byLayer, groups);
         if (group.id !== base.id && access.length === 0) {
             throw new DecorateError(
                 `no key anywhere reaches ${layerNames.join('/')} -- the ${group.id} layer is unreachable`
@@ -289,6 +343,7 @@ export function decorate(parsed, annotations) {
             short: group.short,
             shared: Boolean(group.shared),
             prose: annotations.groupProse[group.id] ?? null,
+            banner: annotations.groupBanner?.[group.id] ?? null,
             osDiff,
             access,
             keys: Object.fromEntries(
@@ -300,7 +355,7 @@ export function decorate(parsed, annotations) {
         };
     });
 
-    assertBehaviourCoverage(outGroups, annotations);
+    assertBehaviourCoverage(outGroups, annotations, parsed);
     return { groups: outGroups, meta: annotations.meta, chords: annotations.chords, behaviours: annotations.behaviours };
 }
 
@@ -308,11 +363,48 @@ function variantsOf(group) {
     return group.shared ? { mac: group.shared, linux: group.shared } : { mac: group.mac, linux: group.linux };
 }
 
+/**
+ * Every layer name annotations.mjs accounts for, and which OS it reads as.
+ *
+ * A layer earns its place either by being a group's own layer or by being
+ * stacked under one -- _TMUX is only ever the latter, because tmux mode is
+ * never on without exactly one mode layer above it.
+ */
+function layerRoles(groups) {
+    const roles = new Map();
+    for (const group of groups) {
+        if (group.shared) roles.set(group.shared, 'mac');
+        else {
+            roles.set(group.mac, 'mac');
+            roles.set(group.linux, 'linux');
+        }
+    }
+    // Second pass, so an under-layer can never shadow a group's own layer.
+    for (const group of groups) {
+        for (const name of group.under ?? []) {
+            if (!roles.has(name)) roles.set(name, 'mac');
+        }
+    }
+    return roles;
+}
+
+/**
+ * A note follows the behaviour, not the position: TM_TREE means the same thing
+ * on all five tmux layers, so it is described once in customKeys and picked up
+ * wherever it appears -- including where a mode layer shows it through a
+ * transparent key. keyNotes stays for the things that are about one position.
+ */
 function attachNotes(keys, groupId, annotations) {
-    return keys.map((key) => ({
-        ...key,
-        note: annotations.keyNotes[`${groupId}:${key.i}`] ?? null,
-    }));
+    return keys.map((key) => {
+        const source = key.resolvedFrom?.src ?? key.src;
+        return {
+            ...key,
+            note:
+                annotations.keyNotes[`${groupId}:${key.i}`] ??
+                annotations.customKeys[source]?.note ??
+                null,
+        };
+    });
 }
 
 /**
@@ -320,7 +412,7 @@ function attachNotes(keys, groupId, annotations) {
  * what that behaviour is. Custom keycodes, layer toggles and the space-cadet
  * shifts all qualify, so the build refuses if any of them lack a note.
  */
-function assertBehaviourCoverage(outGroups, annotations) {
+function assertBehaviourCoverage(outGroups, annotations, parsed) {
     const needsNote = new Set(['custom', 'layer-toggle', 'space-cadet']);
     const missing = [];
 
@@ -335,8 +427,9 @@ function assertBehaviourCoverage(outGroups, annotations) {
     }
     if (missing.length) {
         throw new DecorateError(
-            'these keys do what they do because of code in keymap.c, so they need a ' +
-            'keyNotes entry in annotations.mjs:\n  ' + [...new Set(missing)].join('\n  ')
+            'these keys do what they do because of code in keymap.c, so they need a note in ' +
+            'annotations.mjs -- customKeys for a custom keycode, keyNotes otherwise:\n  ' +
+            [...new Set(missing)].join('\n  ')
         );
     }
 
@@ -350,6 +443,13 @@ function assertBehaviourCoverage(outGroups, annotations) {
     for (const ref of Object.keys(annotations.keyNotes)) {
         if (!valid.has(ref)) {
             throw new DecorateError(`annotations.mjs has a keyNote for '${ref}', which is not a key`);
+        }
+    }
+    for (const token of Object.keys(annotations.customKeys)) {
+        if (!parsed.customKeycodes.includes(token)) {
+            throw new DecorateError(
+                `annotations.mjs describes custom keycode '${token}', which keymap.c no longer has`
+            );
         }
     }
 }
