@@ -22,7 +22,7 @@
   --line: #dde1e7;
   --accent: #2f6df6;
   --warn: #b3610a;
-  --radius: 8px;
+  --radius: 4px;
 
   --c-letter:      #8792a3;
   --c-number:      #2f6df6;
@@ -59,7 +59,7 @@ body {
   font: 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 .wrap { max-width: 1180px; margin: 0 auto; }
-h1 { font-size: 18px; margin: 0 0 2px; letter-spacing: -0.01em; }
+h1 { font-size: 18px; margin: 0 0 2px; }
 .sub { color: var(--ink-soft); font-size: 12px; margin: 0 0 20px; }
 code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; }
 
@@ -80,19 +80,15 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 /* ---- hint + banner ---- */
 .hint { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; min-height: 20px; }
 .hint b { color: var(--ink); font-weight: 600; }
-.banner {
-  border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 9%, var(--panel));
-  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 14px; font-size: 12.5px;
-}
+/* both of these are a line of text against a rule, not a panel: the colour of
+   the rule is the only thing telling you which kind of remark it is */
+.banner { border-left: 2px solid var(--warn); padding: 2px 0 2px 12px; margin-bottom: 14px; font-size: 12.5px; }
 /* the live thumb modifier, called out above the board it is changing */
-.armed-bar {
-  border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel));
-  padding: 8px 14px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 12px; font-size: 12.5px;
-}
+.armed-bar { border-left: 2px solid var(--accent); padding: 2px 0 2px 12px; margin-bottom: 12px; font-size: 12.5px; }
 .armed-bar b { color: var(--ink); }
 .armed-bar button {
-  font: inherit; font-size: 11.5px; margin-left: 10px; padding: 2px 9px; cursor: pointer;
-  background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 99px;
+  font: inherit; font-size: 11.5px; margin-left: 10px; padding: 1px 8px; cursor: pointer;
+  background: transparent; color: var(--accent); border: 1px solid var(--line);
 }
 
 /* ---- layout ---- */
@@ -109,7 +105,10 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
   padding: 2px; overflow: hidden; font: inherit; text-align: center;
 }
 .key:hover, .key:focus-visible { border-color: var(--accent); border-left-color: var(--kc, var(--accent)); outline: none; }
-.key[data-pinned="true"] { box-shadow: 0 0 0 2px var(--accent); }
+/* pinned, entry and differs-by-OS all mark a key without changing its legend.
+   They are outlines rather than shadows so a key stays a flat rectangle, and so
+   a key that is two of the three at once still reads as one shape. */
+.key[data-pinned="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
 .key .tap { font-size: calc(var(--u) * 0.21); font-weight: 600; line-height: 1.1; color: var(--kc, var(--ink)); }
 .key .hold {
   font-size: calc(var(--u) * 0.145); color: var(--ink-soft); line-height: 1.2;
@@ -121,7 +120,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 
 /* ---- a thumb modifier is armed ---- */
 /* the modifier itself */
-.key.armed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.key.armed { outline: 2px solid var(--accent); outline-offset: -1px; }
 .key.armed .hold { color: var(--accent); }
 /* what it changes: the key keeps its own legend and gains the command it sends */
 .key.changed { border-left-color: var(--accent); }
@@ -129,27 +128,28 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: calc(var(--u) * 0.135); color: var(--accent); line-height: 1.2;
   margin-top: 2px; padding-top: 2px; width: 84%;
-  border-top: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-top: 1px solid var(--line);
 }
 /* and what it kills: dead for as long as the modifier is live */
 .key.dead { opacity: 0.45; }
 
 .key.blocked { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--c-blocked) 4px, var(--c-blocked) 5px); border-left-color: var(--line); cursor: default; }
-.key.transparent .tap { font-style: italic; opacity: 0.75; }
+/* the ↓ below says it falls through; the legend itself does not need to shout */
+.key.transparent .tap { opacity: 0.75; }
 .key.transparent::after { content: "↓"; position: absolute; top: 2px; right: 4px; font-size: 10px; color: var(--ink-faint); }
 
 /* faint base-layer legend behind non-base layers */
 .key .ghost { position: absolute; top: 2px; left: 5px; font-size: calc(var(--u) * 0.19); color: var(--ink-faint); opacity: 0.55; font-weight: 600; }
 
 /* keys that differ between Mac and Linux */
-.key.diff { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--warn) 55%, transparent); }
+.key.diff { outline: 1px solid var(--warn); outline-offset: -1px; }
 
 /* the key that gets you to this layer */
-.key.entry { box-shadow: 0 0 0 2px var(--accent); }
+.key.entry { outline: 1px solid var(--accent); outline-offset: -1px; }
 
 /* ---- detail panel ---- */
 .detail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; font-size: 12.5px; position: sticky; top: 24px; }
-.detail h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
+.detail h2 { font-size: 11px; color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
 .detail .big { font-size: 20px; font-weight: 600; margin-bottom: 2px; }
 .detail dl { margin: 12px 0 0; display: grid; grid-template-columns: 58px 1fr; gap: 6px 10px; }
 .detail dt { color: var(--ink-faint); font-size: 11px; padding-top: 2px; }
@@ -160,7 +160,9 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 /* the row that only exists while a modifier is armed */
 .detail .under { color: var(--accent); }
 .detail .empty { color: var(--ink-faint); }
-.chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; background: color-mix(in srgb, var(--kc, var(--ink-faint)) 16%, transparent); color: var(--kc, var(--ink-soft)); font-weight: 600; }
+/* the category name, in the category's own colour -- the colour is the label,
+   so it does not need a pill drawn round it as well */
+.chip { font-size: 11px; color: var(--kc, var(--ink-soft)); font-weight: 600; }
 
 /* ---- footer ---- */
 footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px; }
