@@ -27,6 +27,9 @@ enum custom_keycodes {
     TM_COPY,
     TM_EXIT,
     TM_DTCH,
+    // Not a mode key, but it ends in one: it puts Claude into transcript mode
+    // and opens copy mode over the top of it. Only PANE has it.
+    TM_TRSC,
     // PANE mode.
     TP_UP,
     TP_DOWN,
@@ -172,9 +175,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_TMUX_WINDOW] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,      XXXXXXX,        TW_UP,      XXXXXXX,      TM_DTCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,      XXXXXXX,        TW_UP,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -184,9 +187,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_TMUX_PANE] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,       TP_LYT,      TM_DTCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,      TM_TRSC,       TP_LYT,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,       TP_BRK,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -383,6 +386,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TM_DTCH:
             tmux_key(KC_D);
             tmux_set_mode(TMUX_OFF);
+            return false;
+        // Ctrl-O is Claude's own transcript toggle, so it goes to the program
+        // rather than through the prefix. The transcript is printed into the
+        // pane, so opening copy mode straight after leaves the scrollback
+        // sitting on it and the arrows ready to scroll back through it.
+        case TM_TRSC:
+            tap_code16(C(KC_O));
+            tmux_switch_mode(_TMUX_COPY);
             return false;
 
         // swap-pane takes the neighbour as -s rather than -t so that focus ends

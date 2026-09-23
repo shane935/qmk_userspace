@@ -146,7 +146,20 @@ export default {
             label: 'Detach',
             desc: 'Detach the client, then leave tmux mode',
             note: 'Sends prefix d to detach, and turns tmux mode off with it — there is no ' +
-                'longer a session to send keys to.',
+                'longer a session to send keys to. It sits on the pinky home row, away from ' +
+                'the top row it used to share with Zoom and Layout, because detaching by ' +
+                'accident costs you the whole session.',
+        },
+        TM_TRSC: {
+            label: 'Claude',
+            desc: "Claude's transcript, in copy mode",
+            target: '_TMUX_COPY',
+            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, and then opens " +
+                'copy mode over the top of it. Ctrl-O goes to Claude rather than through the ' +
+                'tmux prefix. Claude prints the transcript into the pane, so copy mode lands on ' +
+                'it with the arrows ready to scroll back — and Copy or Paste then take a piece ' +
+                'of it out. Pane mode is the only place this key exists, because a pane running ' +
+                'Claude is the only place it means anything.',
         },
 
         // --- Pane mode -----------------------------------------------------
