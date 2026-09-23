@@ -36,12 +36,17 @@ enum custom_keycodes {
     TP_ZOOM,
     TP_LYT,
     TP_BRK,
+    TP_RSZE,
+    TP_SPLT,
+    TP_MOVE,
     // WINDOW mode.
     TW_UP,
     TW_DOWN,
     TW_LEFT,
     TW_RGHT,
     TW_LAST,
+    TW_NEW,
+    TW_MOVE,
     // TREE mode.
     TT_SEL,
     // COPY mode.
@@ -51,6 +56,8 @@ enum custom_keycodes {
     TC_RGHT,
     TC_COPY,
     TC_PSTE,
+    TC_WORD,
+    TC_LINE,
 };
 
 // Thumbs: space = nav, enter = numbers
@@ -170,7 +177,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      XXXXXXX,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
+                                                    XXXXXXX,       TW_NEW,      TW_MOVE,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   ),
 
@@ -182,7 +189,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,       TP_BRK,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      XXXXXXX,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
+                                                    TP_RSZE,      TP_SPLT,      TP_MOVE,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   ),
 
@@ -196,7 +203,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      XXXXXXX,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
+                                                    XXXXXXX,      TC_WORD,      TC_LINE,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   )
 };
@@ -208,6 +215,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // Layer 0 is _MAC and so can never be a mode, which leaves it free to mean off.
 #define TMUX_OFF 0
 static uint8_t tmux_mode = TMUX_OFF;
+
+// The left thumb modifier in effect. PANE and WINDOW hold theirs, COPY toggles
+// its own, and only ever one at a time. PANE and WINDOW both call their inner
+// thumb MOVE and neither can be on while the other is, so they share a value.
+enum tmux_modifier {
+    TMOD_NONE,
+    TMOD_RESIZE,
+    TMOD_SPLIT,
+    TMOD_MOVE,
+    TMOD_NEW,
+    TMOD_WORD,
+    TMOD_LINE,
+};
+static uint8_t tmux_mod = TMOD_NONE;
+
+// New panes and windows open where the current pane is.
+#define TMUX_CWD " -c '#{pane_current_path}'"
 
 // Every tmux key the keyboard sends is the prefix followed by one key.
 static void tmux_key(uint16_t keycode) {
@@ -246,6 +270,28 @@ static void tmux_set_mode(uint8_t mode) {
         layer_on(mode);
     }
     tmux_mode = mode;
+    // The thumb modifiers belong to the mode they were pressed in, so a COPY
+    // toggle can never survive into PANE.
+    tmux_mod = TMOD_NONE;
+}
+
+// The four directions differ only in which command each modifier sends, so the
+// arrow keys hand their own four variants to this.
+static void tmux_pane_arrow(uint16_t arrow, const char *resize, const char *split, const char *move) {
+    switch (tmux_mod) {
+        case TMOD_RESIZE:
+            tmux_cmd(resize);
+            break;
+        case TMOD_SPLIT:
+            tmux_cmd(split);
+            break;
+        case TMOD_MOVE:
+            tmux_cmd(move);
+            break;
+        default:
+            tmux_key(arrow);
+            break;
+    }
 }
 
 static void tmux_switch_mode(uint8_t mode) {
@@ -261,6 +307,24 @@ static void tmux_switch_mode(uint8_t mode) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    // PANE's and WINDOW's thumb modifiers are held, so they are the only keys
+    // that have anything to do on the release.
+    switch (keycode) {
+        case TP_RSZE:
+            tmux_mod = record->event.pressed ? TMOD_RESIZE : TMOD_NONE;
+            return false;
+        case TP_SPLT:
+            tmux_mod = record->event.pressed ? TMOD_SPLIT : TMOD_NONE;
+            return false;
+        case TP_MOVE:
+        case TW_MOVE:
+            tmux_mod = record->event.pressed ? TMOD_MOVE : TMOD_NONE;
+            return false;
+        case TW_NEW:
+            tmux_mod = record->event.pressed ? TMOD_NEW : TMOD_NONE;
+            return false;
+    }
+
     if (!record->event.pressed) {
         return true;
     }
@@ -306,17 +370,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_set_mode(TMUX_OFF);
             return false;
 
+        // swap-pane takes the neighbour as -s rather than -t so that focus ends
+        // up on the pane that moved, which is what makes repeated presses push
+        // the same pane along.
         case TP_UP:
-            tmux_key(KC_UP);
+            tmux_pane_arrow(KC_UP, PSTR("resize-pane -U 5"), PSTR("split-window -vb" TMUX_CWD), PSTR("swap-pane -s '{up-of}'"));
             return false;
         case TP_DOWN:
-            tmux_key(KC_DOWN);
+            tmux_pane_arrow(KC_DOWN, PSTR("resize-pane -D 5"), PSTR("split-window -v" TMUX_CWD), PSTR("swap-pane -s '{down-of}'"));
             return false;
         case TP_LEFT:
-            tmux_key(KC_LEFT);
+            tmux_pane_arrow(KC_LEFT, PSTR("resize-pane -L 5"), PSTR("split-window -hb" TMUX_CWD), PSTR("swap-pane -s '{left-of}'"));
             return false;
         case TP_RGHT:
-            tmux_key(KC_RGHT);
+            tmux_pane_arrow(KC_RGHT, PSTR("resize-pane -R 5"), PSTR("split-window -h" TMUX_CWD), PSTR("swap-pane -s '{right-of}'"));
             return false;
         case TP_LAST:
             tmux_key(KC_SCLN);
@@ -331,17 +398,44 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_key(KC_EXLM);
             return false;
 
+        // MOVE leaves the session keys alone, and NEW's new session still needs
+        // the prompt handling, so for now only the bare keys do anything.
         case TW_UP:
-            tmux_key(KC_LPRN);
+            if (tmux_mod == TMOD_NONE) {
+                tmux_key(KC_LPRN);
+            }
             return false;
         case TW_DOWN:
-            tmux_key(KC_RPRN);
+            if (tmux_mod == TMOD_NONE) {
+                tmux_key(KC_RPRN);
+            }
             return false;
         case TW_LEFT:
-            tmux_key(KC_P);
+            switch (tmux_mod) {
+                case TMOD_NEW:
+                    tmux_cmd(PSTR("new-window -b" TMUX_CWD));
+                    break;
+                case TMOD_MOVE:
+                    // -d is what makes the client follow the window it moved.
+                    tmux_cmd(PSTR("swap-window -d -t -1"));
+                    break;
+                default:
+                    tmux_key(KC_P);
+                    break;
+            }
             return false;
         case TW_RGHT:
-            tmux_key(KC_N);
+            switch (tmux_mod) {
+                case TMOD_NEW:
+                    tmux_cmd(PSTR("new-window -a" TMUX_CWD));
+                    break;
+                case TMOD_MOVE:
+                    tmux_cmd(PSTR("swap-window -d -t +1"));
+                    break;
+                default:
+                    tmux_key(KC_N);
+                    break;
+            }
             return false;
         case TW_LAST:
             tmux_key(KC_L);
@@ -354,17 +448,44 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_set_mode(_TMUX_PANE);
             return false;
 
+        // WORD leaves up and down as they were; only LINE changes all four.
         case TC_UP:
-            tap_code(KC_UP);
+            tap_code(tmux_mod == TMOD_LINE ? KC_PGUP : KC_UP);
             return false;
         case TC_DOWN:
-            tap_code(KC_DOWN);
+            tap_code(tmux_mod == TMOD_LINE ? KC_PGDN : KC_DOWN);
             return false;
         case TC_LEFT:
-            tap_code(KC_LEFT);
+            switch (tmux_mod) {
+                case TMOD_WORD:
+                    tap_code(KC_B);
+                    break;
+                case TMOD_LINE:
+                    tap_code(KC_0);
+                    break;
+                default:
+                    tap_code(KC_LEFT);
+                    break;
+            }
             return false;
         case TC_RGHT:
-            tap_code(KC_RGHT);
+            switch (tmux_mod) {
+                case TMOD_WORD:
+                    tap_code(KC_W);
+                    break;
+                case TMOD_LINE:
+                    tap_code16(KC_DLR);
+                    break;
+                default:
+                    tap_code(KC_RGHT);
+                    break;
+            }
+            return false;
+        case TC_WORD:
+            tmux_mod = (tmux_mod == TMOD_WORD) ? TMOD_NONE : TMOD_WORD;
+            return false;
+        case TC_LINE:
+            tmux_mod = (tmux_mod == TMOD_LINE) ? TMOD_NONE : TMOD_LINE;
             return false;
         case TC_COPY:
             // Enter is copy-pipe-and-cancel, so copy mode is already gone.
@@ -394,21 +515,41 @@ bool oled_task_user(void) {
         // which mode - or whether tmux mode at all - is on.
         switch (tmux_mode) {
             case _TMUX_TREE:
-                oled_write_ln_P(PSTR("TREE"), false);
+                oled_write_P(PSTR("TREE"), false);
                 break;
             case _TMUX_WINDOW:
-                oled_write_ln_P(PSTR("WINDOW"), false);
+                oled_write_P(PSTR("WINDOW"), false);
                 break;
             case _TMUX_PANE:
-                oled_write_ln_P(PSTR("PANE"), false);
+                oled_write_P(PSTR("PANE"), false);
                 break;
             case _TMUX_COPY:
-                oled_write_ln_P(PSTR("COPY"), false);
-                break;
-            default:
-                oled_write_ln_P(PSTR(""), false);
+                oled_write_P(PSTR("COPY"), false);
                 break;
         }
+        switch (tmux_mod) {
+            case TMOD_RESIZE:
+                oled_write_P(PSTR(" RESIZE"), false);
+                break;
+            case TMOD_SPLIT:
+                oled_write_P(PSTR(" SPLIT"), false);
+                break;
+            case TMOD_MOVE:
+                oled_write_P(PSTR(" MOVE"), false);
+                break;
+            case TMOD_NEW:
+                oled_write_P(PSTR(" NEW"), false);
+                break;
+            case TMOD_WORD:
+                oled_write_P(PSTR(" WORD"), false);
+                break;
+            case TMOD_LINE:
+                oled_write_P(PSTR(" LINE"), false);
+                break;
+        }
+        // Pads out the rest of the line, which is also what clears it when tmux
+        // mode is off.
+        oled_write_ln_P(PSTR(""), false);
         oled_write_ln_P(is_caps_word_on() ? PSTR("CAPS") : PSTR(""), false);
     }
     return false;
