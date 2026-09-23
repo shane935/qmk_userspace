@@ -56,11 +56,11 @@
 body {
   margin: 0; padding: 24px;
   background: var(--bg); color: var(--ink);
-  font: 15px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 .wrap { max-width: 1180px; margin: 0 auto; }
-h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: -0.01em; }
-.sub { color: var(--ink-soft); font-size: 13px; margin: 0 0 20px; }
+h1 { font-size: 18px; margin: 0 0 2px; letter-spacing: -0.01em; }
+.sub { color: var(--ink-soft); font-size: 12px; margin: 0 0 20px; }
 code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; }
 
 /* ---- controls ---- */
@@ -68,21 +68,31 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 /* wraps rather than overflowing: there are seven layer tabs and they are wide */
 .seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .seg button {
-  font: inherit; font-size: 13px; padding: 7px 15px; border: 0; cursor: pointer;
+  font: inherit; font-size: 12px; padding: 6px 13px; border: 0; cursor: pointer;
   background: transparent; color: var(--ink-soft); border-right: 1px solid var(--line);
 }
 .seg button:last-child { border-right: 0; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
 .seg button:disabled { opacity: 0.4; cursor: default; }
-.toggles { display: flex; gap: 16px; font-size: 13px; color: var(--ink-soft); }
+.toggles { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); }
 .toggles label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; user-select: none; }
 
 /* ---- hint + banner ---- */
-.hint { font-size: 13px; color: var(--ink-soft); margin-bottom: 12px; min-height: 20px; }
+.hint { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; min-height: 20px; }
 .hint b { color: var(--ink); font-weight: 600; }
 .banner {
   border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 9%, var(--panel));
-  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 14px; font-size: 13.5px;
+  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 14px; font-size: 12.5px;
+}
+/* the live thumb modifier, called out above the board it is changing */
+.armed-bar {
+  border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  padding: 8px 14px; border-radius: 0 var(--radius) var(--radius) 0; margin-bottom: 12px; font-size: 12.5px;
+}
+.armed-bar b { color: var(--ink); }
+.armed-bar button {
+  font: inherit; font-size: 11.5px; margin-left: 10px; padding: 2px 9px; cursor: pointer;
+  background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 99px;
 }
 
 /* ---- layout ---- */
@@ -100,14 +110,29 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 }
 .key:hover, .key:focus-visible { border-color: var(--accent); border-left-color: var(--kc, var(--accent)); outline: none; }
 .key[data-pinned="true"] { box-shadow: 0 0 0 2px var(--accent); }
-.key .tap { font-size: calc(var(--u) * 0.26); font-weight: 600; line-height: 1.1; color: var(--kc, var(--ink)); }
+.key .tap { font-size: calc(var(--u) * 0.21); font-weight: 600; line-height: 1.1; color: var(--kc, var(--ink)); }
 .key .hold {
-  font-size: calc(var(--u) * 0.17); color: var(--ink-soft); line-height: 1.2;
+  font-size: calc(var(--u) * 0.145); color: var(--ink-soft); line-height: 1.2;
   margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--line); width: 76%;
 }
 .key.no-hold .tap { margin-bottom: calc(var(--u) * 0.04); } /* optically centre */
 /* held-only keys -- the tmux thumb modifiers -- have no tap line to sit under */
-.key.no-tap .hold { border-top: 0; padding-top: 0; margin-top: 0; font-size: calc(var(--u) * 0.22); color: var(--kc, var(--ink)); font-weight: 600; }
+.key.no-tap .hold { border-top: 0; padding-top: 0; margin-top: 0; font-size: calc(var(--u) * 0.185); color: var(--kc, var(--ink)); font-weight: 600; }
+
+/* ---- a thumb modifier is armed ---- */
+/* the modifier itself */
+.key.armed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.key.armed .hold { color: var(--accent); }
+/* what it changes: the key keeps its own legend and gains the command it sends */
+.key.changed { border-left-color: var(--accent); }
+.key .alt {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: calc(var(--u) * 0.135); color: var(--accent); line-height: 1.2;
+  margin-top: 2px; padding-top: 2px; width: 84%;
+  border-top: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* and what it kills: dead for as long as the modifier is live */
+.key.dead { opacity: 0.45; }
 
 .key.blocked { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--c-blocked) 4px, var(--c-blocked) 5px); border-left-color: var(--line); cursor: default; }
 .key.transparent .tap { font-style: italic; opacity: 0.75; }
@@ -123,15 +148,17 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .key.entry { box-shadow: 0 0 0 2px var(--accent); }
 
 /* ---- detail panel ---- */
-.detail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; font-size: 13.5px; position: sticky; top: 24px; }
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; font-size: 12.5px; position: sticky; top: 24px; }
 .detail h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); margin: 0 0 10px; font-weight: 600; }
-.detail .big { font-size: 22px; font-weight: 600; margin-bottom: 2px; }
-.detail dl { margin: 12px 0 0; display: grid; grid-template-columns: 52px 1fr; gap: 6px 10px; }
-.detail dt { color: var(--ink-faint); font-size: 12px; padding-top: 1px; }
+.detail .big { font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+.detail dl { margin: 12px 0 0; display: grid; grid-template-columns: 58px 1fr; gap: 6px 10px; }
+.detail dt { color: var(--ink-faint); font-size: 11px; padding-top: 2px; }
 .detail dd { margin: 0; }
-.detail .src { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--ink-soft); word-break: break-all; }
+.detail .src { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: var(--ink-soft); word-break: break-all; }
 .detail .note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); }
-.detail .timing { margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
+.detail .timing { margin-top: 10px; font-size: 11.5px; color: var(--ink-soft); }
+/* the row that only exists while a modifier is armed */
+.detail .under { color: var(--accent); }
 .detail .empty { color: var(--ink-faint); }
 .chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; background: color-mix(in srgb, var(--kc, var(--ink-faint)) 16%, transparent); color: var(--kc, var(--ink-soft)); font-weight: 600; }
 
@@ -139,9 +166,9 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
-.card h3 { margin: 0 0 6px; font-size: 14px; }
-.card p { margin: 0; font-size: 13px; color: var(--ink-soft); }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 18px; font-size: 12px; color: var(--ink-soft); }
+.card h3 { margin: 0 0 6px; font-size: 13px; }
+.card p { margin: 0; font-size: 12px; color: var(--ink-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 18px; font-size: 11.5px; color: var(--ink-soft); }
 .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; background: var(--kc); margin-right: 5px; vertical-align: -1px; }
 .prov { margin-top: 16px; font-size: 11.5px; color: var(--ink-faint); }
 </style>
@@ -149,7 +176,7 @@ footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px;
 <body>
 <div class="wrap">
   <h1>Corne keymap reference</h1>
-  <p class="sub">Generated from <code>keymap.c</code>. Hover a key for detail, click to pin it. Keys <kbd>1</kbd>–<kbd id="last-tab"></kbd> switch layer, <kbd>m</kbd>/<kbd>l</kbd> switch OS.</p>
+  <p class="sub">Generated from <code>keymap.c</code>. Hover a key for detail, click to pin it. On the tmux layers, clicking a thumb modifier holds it down and the keys it changes say what they send. Keys <kbd>1</kbd>–<kbd id="last-tab"></kbd> switch layer, <kbd>m</kbd>/<kbd>l</kbd> switch OS, <kbd>esc</kbd> releases.</p>
 
   <div class="controls">
     <div class="seg" id="os-switch" role="group" aria-label="Operating system"></div>
@@ -161,6 +188,7 @@ footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 20px;
   </div>
 
   <div id="banner"></div>
+  <div id="armed"></div>
   <p class="hint" id="hint"></p>
 
   <div class="main">
@@ -189,12 +217,27 @@ const state = {
   hovered: null,
   showDiff: false,
   showGhost: false,
+  // Key index of the thumb modifier being held, or null. It belongs to the
+  // layer it is on, so changing layer drops it -- exactly as the keyboard does.
+  armed: null,
 };
 
 const groupById = (id) => DATA.groups.find((g) => g.id === id);
 const baseGroup = DATA.groups[0];
 const currentGroup = () => groupById(state.group);
 const keysOf = (group, os) => group.keys[group.shared ? 'mac' : os].keys;
+
+/** The modifier currently held, as its data object, or null. */
+const armedMod = () => currentGroup().mods.find((m) => m.key === state.armed) ?? null;
+/** What `i` sends while that modifier is held: an override, null if dead, or undefined. */
+const overrideAt = (mod, i) => (mod && i in mod.overrides ? mod.overrides[i] : undefined);
+
+function arm(i) {
+  // Only one can ever be live, on the keyboard and here: the C clears tmux_mod
+  // rather than stacking it.
+  state.armed = state.armed === i ? null : i;
+  render();
+}
 
 /* ---------- board geometry ---------- */
 const U = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u'));
@@ -277,6 +320,7 @@ function renderBoard() {
   const diff = new Set(state.showDiff ? group.osDiff : []);
   const own = group.keys[group.shared ? 'mac' : state.os].layer;
   const entry = new Set(group.access.filter((a) => a.from.includes(own)).map((a) => a.key));
+  const mod = armedMod();
 
   $('board').innerHTML = keys
     .map((k, i) => {
@@ -286,6 +330,14 @@ function renderBoard() {
       if (diff.has(i)) cls.push('diff');
       if (entry.has(i)) cls.push('entry');
 
+      // The modifier keeps its own legend and lights up; the keys it changes
+      // keep theirs too and gain a second line, because the arrow on the cap
+      // does not move -- only what it sends does.
+      const change = overrideAt(mod, i);
+      if (mod && mod.key === i) cls.push('armed');
+      if (change) cls.push('changed');
+      if (change === null) cls.push('dead');
+
       const ghost =
         state.showGhost && group.id !== baseGroup.id && baseKeys[i].tap
           ? `<span class="ghost">${esc(baseKeys[i].tap.label)}</span>`
@@ -294,7 +346,8 @@ function renderBoard() {
         ? ''
         : ghost +
           (k.tap ? `<span class="tap">${esc(k.tap.label)}</span>` : '') +
-          (k.hold ? `<span class="hold">${esc(k.hold.label)}</span>` : '');
+          (k.hold ? `<span class="hold">${esc(k.hold.label)}</span>` : '') +
+          (change ? `<span class="alt">${esc(change.sub)}</span>` : '');
 
       return `<button class="${cls.join(' ')}" style="--kc: var(--c-${k.cat})"
           data-i="${i}" data-pinned="${state.pinned === i}"
@@ -303,6 +356,20 @@ function renderBoard() {
     .join('');
 
   layoutBoard();
+}
+
+function renderArmed() {
+  const mod = armedMod();
+  if (!mod) { $('armed').innerHTML = ''; return; }
+
+  // Held and toggled modifiers are the same picture here but not on the
+  // keyboard, and which one you are looking at decides what releases it.
+  const how = mod.via === 'hold'
+    ? 'is held down. On the keyboard you would be holding that thumb; let go and the keys below go back to what they were.'
+    : 'is toggled on. On the keyboard it stays on until you tap it again or change mode.';
+  $('armed').innerHTML =
+    `<div class="armed-bar"><b>${esc(mod.label)}</b> ${how}
+     <button id="disarm">Release</button></div>`;
 }
 
 function renderDetail() {
@@ -325,6 +392,18 @@ function renderDetail() {
   const rows = [];
   if (k.tap) rows.push(['Tap', esc(k.tap.desc)]);
   if (k.hold) rows.push(['Hold', esc(k.hold.desc)]);
+
+  // What this key sends instead while the armed modifier is live. It goes above
+  // the source, because right now it is the truer answer of the two.
+  const mod = armedMod();
+  const change = overrideAt(mod, i);
+  if (change !== undefined) {
+    rows.push([
+      `With ${esc(mod.label)}`,
+      `<span class="under">${change === null ? 'Nothing — this key is dead while it is live' : esc(change.desc)}</span>`,
+    ]);
+  }
+
   rows.push(['Source', `<span class="src">${esc(k.src)}${k.expanded ? `<br>= ${esc(k.expanded)}` : ''}</span>`]);
 
   // Mod-taps and layer-taps are the whole reason the tapping term matters.
@@ -380,6 +459,7 @@ function renderFooter() {
 function render() {
   renderControls();
   renderHint();
+  renderArmed();
   renderBoard();
   renderDetail();
   renderFooter();
@@ -396,8 +476,12 @@ $('os-switch').addEventListener('click', (e) => {
 });
 $('layer-tabs').addEventListener('click', (e) => {
   const group = e.target.dataset?.group;
-  if (group) { state.group = group; state.pinned = null; state.hovered = null; render(); }
+  if (group) {
+    state.group = group; state.pinned = null; state.hovered = null; state.armed = null;
+    render();
+  }
 });
+$('armed').addEventListener('click', (e) => { if (e.target.id === 'disarm') arm(state.armed); });
 $('opt-diff').addEventListener('change', (e) => { state.showDiff = e.target.checked; renderBoard(); });
 $('opt-ghost').addEventListener('change', (e) => { state.showGhost = e.target.checked; renderBoard(); });
 
@@ -412,6 +496,9 @@ $('board').addEventListener('click', (e) => {
   const key = e.target.closest('.key');
   if (!key || key.classList.contains('blocked')) return;
   const i = Number(key.dataset.i);
+  // A thumb modifier is held rather than pinned: clicking it is the page's
+  // stand-in for putting your thumb on it.
+  if (currentGroup().mods.some((m) => m.key === i)) { arm(i); return; }
   state.pinned = state.pinned === i ? null : i;
   renderBoard();
   renderDetail();
@@ -419,9 +506,10 @@ $('board').addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { state.armed = null; render(); return; }
   const index = Number(e.key) - 1;
   if (index >= 0 && index < DATA.groups.length) {
-    state.group = DATA.groups[index].id; state.pinned = null; render(); return;
+    state.group = DATA.groups[index].id; state.pinned = null; state.armed = null; render(); return;
   }
   if (e.key === 'm' || e.key === 'l') {
     if (!currentGroup().shared) { state.os = e.key === 'm' ? 'mac' : 'linux'; render(); }
