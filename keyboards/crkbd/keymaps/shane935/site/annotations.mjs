@@ -154,12 +154,14 @@ export default {
             label: 'Claude',
             desc: "Claude's transcript, in copy mode",
             target: '_TMUX_COPY',
-            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, and then opens " +
-                'copy mode over the top of it. Ctrl-O goes to Claude rather than through the ' +
-                'tmux prefix. Claude prints the transcript into the pane, so copy mode lands on ' +
-                'it with the arrows ready to scroll back — and Copy or Paste then take a piece ' +
-                'of it out. Pane mode is the only place this key exists, because a pane running ' +
-                'Claude is the only place it means anything.',
+            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, waits 300 ms, " +
+                'and then opens copy mode over the top of it. Ctrl-O goes to Claude rather than ' +
+                'through the tmux prefix. Claude prints the transcript into the pane, so copy ' +
+                'mode lands on it with the arrows ready to scroll back — and Copy or Paste then ' +
+                'take a piece of it out. The wait is the whole trick: copy mode freezes whatever ' +
+                'the pane looks like when it opens, and without a gap it opens on the screen ' +
+                'from before the transcript was drawn. Pane mode is the only place this key ' +
+                'exists, because a pane running Claude is the only place it means anything.',
         },
 
         // --- Pane mode -----------------------------------------------------

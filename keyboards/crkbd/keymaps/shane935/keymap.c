@@ -215,6 +215,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 #define TMUX_PREFIX C(KC_B)
 
+// How long to give Claude to draw its transcript before copy mode freezes the
+// pane over the top of it. Typed by hand the two keys are a human apart and
+// this does not come up; sent as a macro they are not, and copy mode was
+// opening on the screen from before the transcript arrived. Raise it if the
+// machine is loaded enough to still lose the race.
+#define TRANSCRIPT_RENDER_MS 300
+
 // Which mode layer sits on top of _TMUX, or TMUX_OFF when tmux mode is off.
 // Layer 0 is _MAC and so can never be a mode, which leaves it free to mean off.
 #define TMUX_OFF 0
@@ -389,10 +396,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         // Ctrl-O is Claude's own transcript toggle, so it goes to the program
         // rather than through the prefix. The transcript is printed into the
-        // pane, so opening copy mode straight after leaves the scrollback
-        // sitting on it and the arrows ready to scroll back through it.
+        // pane, so opening copy mode after it leaves the scrollback sitting on
+        // it and the arrows ready to scroll back through it -- but only after
+        // it has actually been printed, hence the wait.
         case TM_TRSC:
             tap_code16(C(KC_O));
+            wait_ms(TRANSCRIPT_RENDER_MS);
             tmux_switch_mode(_TMUX_COPY);
             return false;
 
