@@ -6,8 +6,9 @@
 //
 //   1. decoding  -- LCTL_T(KC_S) becomes tap S / hold Control
 //   2. transparency resolution -- _______ becomes what it actually fires
-//   3. derivation -- which keys differ between Mac and Linux, and how you
-//      reach each layer, computed by diffing and scanning rather than listed
+//   3. derivation -- which keys differ between Mac and Linux, how you reach
+//      each layer, and where the thumb modifiers and the keys they change sit,
+//      computed by diffing and scanning rather than listed
 
 import { lookup, modLabel, MOD_WRAPPERS, LAYER_HEADS } from './keycodes.mjs';
 
@@ -355,6 +356,7 @@ export function decorate(parsed, annotations) {
         };
     });
 
+    attachModifiers(outGroups, annotations);
     assertBehaviourCoverage(outGroups, annotations, parsed);
     return { groups: outGroups, meta: annotations.meta, chords: annotations.chords, behaviours: annotations.behaviours };
 }
@@ -405,6 +407,82 @@ function attachNotes(keys, groupId, annotations) {
                 null,
         };
     });
+}
+
+/** Every position on `group` holding `token`, by key index. */
+function positionsOf(group, token) {
+    // The two OS variants of a group sit their keys in the same places, so
+    // either one answers the question; a shared layer only has the one.
+    return group.keys.mac.keys
+        .filter((key) => (key.resolvedFrom?.src ?? key.src) === token)
+        .map((key) => key.i);
+}
+
+/**
+ * Turns annotations.modifiers into positions the page can draw.
+ *
+ * Nothing about placement is written down twice: which layer a modifier belongs
+ * to is found by looking for its keycode, and held versus toggled comes from
+ * whether its customKeys entry has a `hold`. Move a modifier in keymap.c and
+ * this follows it; take one off a layer and the build says so.
+ */
+function attachModifiers(outGroups, annotations) {
+    const modifiers = annotations.modifiers ?? {};
+
+    // A key you hold changes what other keys send -- that is the only reason to
+    // hold one -- and that effect is invisible in keymaps[]. So a held key with
+    // nothing written about it is the exact gap this section exists to close.
+    for (const [token, custom] of Object.entries(annotations.customKeys)) {
+        if (custom.hold && !modifiers[token]) {
+            throw new DecorateError(
+                `${token} is held rather than tapped, so it changes what other keys send, and ` +
+                'nothing in keymaps[] records that. Add it to `modifiers` in annotations.mjs.'
+            );
+        }
+    }
+
+    for (const group of outGroups) group.mods = [];
+
+    for (const [token, changes] of Object.entries(modifiers)) {
+        const custom = annotations.customKeys[token];
+        if (!custom) {
+            throw new DecorateError(
+                `annotations.mjs has a modifiers entry for '${token}', which is not a customKeys entry`
+            );
+        }
+
+        const homes = outGroups.filter((group) => positionsOf(group, token).length > 0);
+        if (homes.length !== 1) {
+            throw new DecorateError(
+                `modifier '${token}' is on ${homes.length === 0 ? 'no layer' : homes.map((g) => g.id).join(' and ')}` +
+                ' -- it has to be on exactly one, because the page arms it by clicking it there'
+            );
+        }
+        const group = homes[0];
+        const at = positionsOf(group, token);
+        if (at.length !== 1) {
+            throw new DecorateError(`modifier '${token}' is on the ${group.id} layer ${at.length} times`);
+        }
+
+        const overrides = {};
+        for (const [target, change] of Object.entries(changes)) {
+            const where = positionsOf(group, target);
+            if (where.length !== 1) {
+                throw new DecorateError(
+                    `'${token}' says it changes '${target}', which is on the ${group.id} layer ` +
+                    `${where.length} times -- it has to be there exactly once`
+                );
+            }
+            overrides[where[0]] = change;
+        }
+
+        group.mods.push({
+            key: at[0],
+            label: (custom.hold ?? custom).label,
+            via: custom.hold ? 'hold' : 'toggle',
+            overrides,
+        });
+    }
 }
 
 /**

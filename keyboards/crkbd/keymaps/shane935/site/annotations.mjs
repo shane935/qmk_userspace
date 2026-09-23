@@ -146,7 +146,20 @@ export default {
             label: 'Detach',
             desc: 'Detach the client, then leave tmux mode',
             note: 'Sends prefix d to detach, and turns tmux mode off with it — there is no ' +
-                'longer a session to send keys to.',
+                'longer a session to send keys to. It sits on the pinky home row, away from ' +
+                'the top row it used to share with Zoom and Layout, because detaching by ' +
+                'accident costs you the whole session.',
+        },
+        TM_TRSC: {
+            label: 'Claude',
+            desc: "Claude's transcript, in copy mode",
+            target: '_TMUX_COPY',
+            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, and then opens " +
+                'copy mode over the top of it. Ctrl-O goes to Claude rather than through the ' +
+                'tmux prefix. Claude prints the transcript into the pane, so copy mode lands on ' +
+                'it with the arrows ready to scroll back — and Copy or Paste then take a piece ' +
+                'of it out. Pane mode is the only place this key exists, because a pane running ' +
+                'Claude is the only place it means anything.',
         },
 
         // --- Pane mode -----------------------------------------------------
@@ -329,6 +342,67 @@ export default {
         },
     },
 
+    // What the thumb modifiers do to the keys around them.
+    //
+    // This is the half of the tmux layers you cannot see. Holding Split does not
+    // change the arrows, it changes what they send, and keymaps[] has no record
+    // of that at all -- it is a switch on tmux_mod inside process_record_user.
+    // So it is written here, and the page replays it.
+    //
+    // Keyed by the modifier's own keycode, then by the keycode of each key it
+    // changes; null means the key goes dead while the modifier is live. Which
+    // layer a modifier belongs to, and whether it is held or toggled, are both
+    // derived -- decorate.mjs finds the keycode on exactly one layer and reads
+    // hold vs tap off customKeys above. It fails the build on a modifier that is
+    // on no layer or two, on a changed key that is not on the same layer, and on
+    // a held modifier that has no entry here at all.
+    //
+    // `sub` is the second line drawn on the key, so it has to stay short.
+    modifiers: {
+        TP_RSZE: {
+            TP_UP: { sub: 'resize -U 5', desc: 'Grow the pane upwards by five cells' },
+            TP_DOWN: { sub: 'resize -D 5', desc: 'Grow the pane downwards by five cells' },
+            TP_LEFT: { sub: 'resize -L 5', desc: 'Grow the pane leftwards by five cells' },
+            TP_RGHT: { sub: 'resize -R 5', desc: 'Grow the pane rightwards by five cells' },
+        },
+        TP_SPLT: {
+            TP_UP: { sub: 'split -vb', desc: 'split-window -vb — a new pane above this one' },
+            TP_DOWN: { sub: 'split -v', desc: 'split-window -v — a new pane below this one' },
+            TP_LEFT: { sub: 'split -hb', desc: 'split-window -hb — a new pane to the left' },
+            TP_RGHT: { sub: 'split -h', desc: 'split-window -h — a new pane to the right' },
+        },
+        TP_MOVE: {
+            TP_UP: { sub: 'swap ↑', desc: "swap-pane -s '{up-of}' — trade places with the pane above" },
+            TP_DOWN: { sub: 'swap ↓', desc: "swap-pane -s '{down-of}' — trade places with the pane below" },
+            TP_LEFT: { sub: 'swap ←', desc: "swap-pane -s '{left-of}' — trade places with the pane to the left" },
+            TP_RGHT: { sub: 'swap →', desc: "swap-pane -s '{right-of}' — trade places with the pane to the right" },
+        },
+        TW_NEW: {
+            TW_LEFT: { sub: 'new -b', desc: 'new-window -b — a new window before this one' },
+            TW_RGHT: { sub: 'new -a', desc: 'new-window -a — a new window after this one' },
+            // Up and down are sessions, and opening a session still needs prompt
+            // handling that is not written yet, so they are simply dead here.
+            TW_UP: null,
+            TW_DOWN: null,
+        },
+        TW_MOVE: {
+            TW_LEFT: { sub: 'swap -t -1', desc: 'swap-window -d -t -1 — move this window one to the left' },
+            TW_RGHT: { sub: 'swap -t +1', desc: 'swap-window -d -t +1 — move this window one to the right' },
+            TW_UP: null,
+            TW_DOWN: null,
+        },
+        TC_WORD: {
+            TC_LEFT: { sub: 'b · word', desc: 'b — back one word' },
+            TC_RGHT: { sub: 'w · word', desc: 'w — forward one word' },
+        },
+        TC_LINE: {
+            TC_LEFT: { sub: '0 · line', desc: '0 — the start of the line' },
+            TC_RGHT: { sub: '$ · line', desc: '$ — the end of the line' },
+            TC_UP: { sub: 'PgUp', desc: 'Page Up — back a screenful' },
+            TC_DOWN: { sub: 'PgDn', desc: 'Page Down — forward a screenful' },
+        },
+    },
+
     // Keyed by "<group>:<key index>", for the things that are about one
     // position rather than one keycode. Plain keycodes on the tree and copy
     // layers need these: they are ordinary keys as far as the keymap is
@@ -385,7 +459,9 @@ export default {
                 'there, and they are the part of this keymap you cannot see: they change what ' +
                 'the arrows send without changing the arrows. Pane and Window hold theirs; ' +
                 'Copy toggles its own. Only one can ever be live, and changing mode always ' +
-                'clears it, so a Copy toggle cannot survive into Pane.',
+                'clears it, so a Copy toggle cannot survive into Pane. Click one on the board ' +
+                'above to hold it down: the keys it changes will say what they send instead, ' +
+                'and the ones it kills go dim.',
         },
         {
             title: 'Killing takes two presses, and only from the tree',
