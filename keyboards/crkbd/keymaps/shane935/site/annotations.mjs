@@ -215,6 +215,15 @@ export default {
                 'Window mode has a Move on the same thumb and neither can be live while the ' +
                 'other is, so the two share one state.',
         },
+        TP_KILL: {
+            label: 'Kill',
+            desc: 'Kill the current pane — press twice',
+            note: 'prefix x, which tmux wraps in confirm-before, so the first press only puts ' +
+                'the "kill-pane? (y/n)" prompt up and a second press answers it. Any other key ' +
+                'answers no. Killing the last pane in a session ends the session, and killing ' +
+                'the last session ends the server — the keyboard stays in tmux mode either way, ' +
+                'so Exit it yourself.',
+        },
 
         // --- Window mode ---------------------------------------------------
         TW_UP: {
@@ -266,6 +275,15 @@ export default {
             desc: 'Choose the highlighted item and close the tree',
             note: "Sends Enter, and what that means is up to the tree's own template. The " +
                 'keyboard returns to Pane mode because the tree is now closed.',
+        },
+        TT_KILL: {
+            label: 'Kill',
+            desc: 'Kill the highlighted session or window — press twice',
+            note: 'A bare x, because the tree reads keys itself rather than through the prefix. ' +
+                'It kills whatever the cursor is on, session or window, after a second press to ' +
+                'confirm; any other key answers no. The tree stays open afterwards. It is on ' +
+                'the same key as Pane mode\'s Kill, and the tree is the only way to kill a ' +
+                'session or window from the keyboard.',
         },
 
         // --- Copy mode -----------------------------------------------------
@@ -376,6 +394,15 @@ export default {
                 'the arrows send without changing the arrows. Pane and Window hold theirs; ' +
                 'Copy toggles its own. Only one can ever be live, and changing mode always ' +
                 'clears it, so a Copy toggle cannot survive into Pane.',
+        },
+        {
+            title: 'Killing things takes two presses',
+            body: 'Both Kill keys — the one in Pane mode and the one in Tree mode, on the same ' +
+                'position in each — raise a "(y/n)" prompt in tmux rather than killing outright, ' +
+                'and no tmux layer has a y on it to answer with. So the first press asks and a ' +
+                'second press of the same key answers. While a kill is waiting the OLED shows ' +
+                'KILL?. Pressing anything else answers no first and then does its own job, so ' +
+                'the prompt can never outlive the press that raised it and swallow a later key.',
         },
         {
             title: 'Why every layer exists twice',

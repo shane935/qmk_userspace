@@ -39,6 +39,7 @@ enum custom_keycodes {
     TP_RSZE,
     TP_SPLT,
     TP_MOVE,
+    TP_KILL,
     // WINDOW mode.
     TW_UP,
     TW_DOWN,
@@ -49,6 +50,7 @@ enum custom_keycodes {
     TW_MOVE,
     // TREE mode.
     TT_SEL,
+    TT_KILL,
     // COPY mode.
     TC_UP,
     TC_DOWN,
@@ -159,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // only aliases for Left/Right, which J and L already cover.
     [_TMUX_TREE] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     XXXXXXX,   A(KC_MINS),        KC_UP,   A(KC_PLUS),      XXXXXXX,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     XXXXXXX,   A(KC_MINS),        KC_UP,   A(KC_PLUS),      TT_KILL,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
@@ -171,9 +173,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_TMUX_WINDOW] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,      XXXXXXX,        TW_UP,      XXXXXXX,      TM_DTCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,      XXXXXXX,        TW_UP,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -183,9 +185,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_TMUX_PANE] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,       TP_LYT,      TM_DTCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,       TP_LYT,      TP_KILL,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,       TP_BRK,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -229,6 +231,11 @@ enum tmux_modifier {
     TMOD_LINE,
 };
 static uint8_t tmux_mod = TMOD_NONE;
+
+// Both kill keys raise tmux's own "(y/n)" prompt, and no tmux layer has a y on
+// it to answer with. So a kill is two presses of the same key: one to ask, one
+// to answer. True between those two presses.
+static bool tmux_kill_pending = false;
 
 // New panes and windows open where the current pane is.
 #define TMUX_CWD " -c '#{pane_current_path}'"
@@ -307,6 +314,15 @@ static void tmux_switch_mode(uint8_t mode) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    // The kill prompt is tmux's, not the keyboard's: while it is up it swallows
+    // the next key whatever that key was meant for. So every key except the two
+    // that answer it says no first and then does its own job, and the prompt can
+    // never outlive the press that raised it.
+    if (record->event.pressed && tmux_kill_pending && keycode != TT_KILL && keycode != TP_KILL) {
+        tap_code(KC_N);
+        tmux_kill_pending = false;
+    }
+
     // PANE's and WINDOW's thumb modifiers are held, so they are the only keys
     // that have anything to do on the release.
     switch (keycode) {
@@ -397,6 +413,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TP_BRK:
             tmux_key(KC_EXLM);
             return false;
+        // prefix x is kill-pane, which tmux wraps in confirm-before, so this
+        // asks on the first press and answers on the second.
+        case TP_KILL:
+            if (tmux_kill_pending) {
+                tap_code(KC_Y);
+            } else {
+                tmux_key(KC_X);
+            }
+            tmux_kill_pending = !tmux_kill_pending;
+            return false;
 
         // MOVE leaves the session keys alone, and NEW's new session still needs
         // the prompt handling, so for now only the bare keys do anything.
@@ -446,6 +472,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             // there is nothing to know here beyond "the tree is now closed".
             tap_code(KC_ENT);
             tmux_set_mode(_TMUX_PANE);
+            return false;
+        // A bare x, because the tree is reading keys itself rather than through
+        // the prefix. It kills whatever is highlighted, session or window, and
+        // the tree stays open afterwards.
+        case TT_KILL:
+            if (tmux_kill_pending) {
+                tap_code(KC_Y);
+            } else {
+                tap_code(KC_X);
+            }
+            tmux_kill_pending = !tmux_kill_pending;
             return false;
 
         // WORD leaves up and down as they were; only LINE changes all four.
@@ -546,6 +583,11 @@ bool oled_task_user(void) {
             case TMOD_LINE:
                 oled_write_P(PSTR(" LINE"), false);
                 break;
+        }
+        // A kill is waiting on its second press. tmux is showing its own prompt
+        // too, but that is down in the status line and easy to miss.
+        if (tmux_kill_pending) {
+            oled_write_P(PSTR(" KILL?"), false);
         }
         // Pads out the rest of the line, which is also what clears it when tmux
         // mode is off.
