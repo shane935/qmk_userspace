@@ -409,10 +409,8 @@ function attachNotes(keys, groupId, annotations) {
     });
 }
 
-/** Every position on `group` holding `token`, by key index. */
+/** Every position on `group` holding `token`. Either OS variant answers it. */
 function positionsOf(group, token) {
-    // The two OS variants of a group sit their keys in the same places, so
-    // either one answers the question; a shared layer only has the one.
     return group.keys.mac.keys
         .filter((key) => (key.resolvedFrom?.src ?? key.src) === token)
         .map((key) => key.i);
@@ -421,17 +419,14 @@ function positionsOf(group, token) {
 /**
  * Turns annotations.modifiers into positions the page can draw.
  *
- * Nothing about placement is written down twice: which layer a modifier belongs
- * to is found by looking for its keycode, and held versus toggled comes from
- * whether its customKeys entry has a `hold`. Move a modifier in keymap.c and
- * this follows it; take one off a layer and the build says so.
+ * Placement is found rather than written down: the layer from the keycode, held
+ * versus toggled from whether customKeys gives it a `hold`.
  */
 function attachModifiers(outGroups, annotations) {
     const modifiers = annotations.modifiers ?? {};
 
-    // A key you hold changes what other keys send -- that is the only reason to
-    // hold one -- and that effect is invisible in keymaps[]. So a held key with
-    // nothing written about it is the exact gap this section exists to close.
+    // A key is only worth holding if it changes others, and that is invisible
+    // in keymaps[], so a held key with nothing written about it is a gap.
     for (const [token, custom] of Object.entries(annotations.customKeys)) {
         if (custom.hold && !modifiers[token]) {
             throw new DecorateError(

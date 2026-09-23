@@ -154,14 +154,12 @@ export default {
             label: 'Claude',
             desc: "Claude's transcript, in copy mode",
             target: '_TMUX_COPY',
-            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, waits 300 ms, " +
-                'and then opens copy mode over the top of it. Ctrl-O goes to Claude rather than ' +
-                'through the tmux prefix. Claude prints the transcript into the pane, so copy ' +
-                'mode lands on it with the arrows ready to scroll back — and Copy or Paste then ' +
-                'take a piece of it out. The wait is the whole trick: copy mode freezes whatever ' +
-                'the pane looks like when it opens, and without a gap it opens on the screen ' +
-                'from before the transcript was drawn. Pane mode is the only place this key ' +
-                'exists, because a pane running Claude is the only place it means anything.',
+            note: "Sends Ctrl-O — Claude Code's own transcript toggle, so it goes to the " +
+                'program rather than through the tmux prefix — waits 300 ms for the transcript ' +
+                'to be drawn, then opens copy mode over it with the arrows ready to scroll back. ' +
+                'The wait is the whole trick: copy mode freezes whatever the pane looks like as ' +
+                'it opens. Leaving copy mode sends Ctrl-O again, so the transcript is put away ' +
+                'however you go. Pane mode is the only place this key exists.',
         },
 
         // --- Pane mode -----------------------------------------------------
@@ -344,21 +342,13 @@ export default {
         },
     },
 
-    // What the thumb modifiers do to the keys around them.
+    // What the thumb modifiers do to the keys around them -- the half of the
+    // tmux layers keymaps[] has no record of, because it is a switch on
+    // tmux_mod inside process_record_user.
     //
-    // This is the half of the tmux layers you cannot see. Holding Split does not
-    // change the arrows, it changes what they send, and keymaps[] has no record
-    // of that at all -- it is a switch on tmux_mod inside process_record_user.
-    // So it is written here, and the page replays it.
-    //
-    // Keyed by the modifier's own keycode, then by the keycode of each key it
+    // Keyed by the modifier's keycode, then by the keycode of each key it
     // changes; null means the key goes dead while the modifier is live. Which
-    // layer a modifier belongs to, and whether it is held or toggled, are both
-    // derived -- decorate.mjs finds the keycode on exactly one layer and reads
-    // hold vs tap off customKeys above. It fails the build on a modifier that is
-    // on no layer or two, on a changed key that is not on the same layer, and on
-    // a held modifier that has no entry here at all.
-    //
+    // layer a modifier is on and whether it is held or toggled are derived.
     // `sub` is the second line drawn on the key, so it has to stay short.
     modifiers: {
         TP_RSZE: {
@@ -382,8 +372,8 @@ export default {
         TW_NEW: {
             TW_LEFT: { sub: 'new -b', desc: 'new-window -b — a new window before this one' },
             TW_RGHT: { sub: 'new -a', desc: 'new-window -a — a new window after this one' },
-            // Up and down are sessions, and opening a session still needs prompt
-            // handling that is not written yet, so they are simply dead here.
+            // Up and down are sessions, and a new session still needs prompt
+            // handling that is not written yet.
             TW_UP: null,
             TW_DOWN: null,
         },

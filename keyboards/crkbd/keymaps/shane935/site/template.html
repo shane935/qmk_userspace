@@ -80,8 +80,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 /* ---- hint + banner ---- */
 .hint { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; min-height: 20px; }
 .hint b { color: var(--ink); font-weight: 600; }
-/* both of these are a line of text against a rule, not a panel: the colour of
-   the rule is the only thing telling you which kind of remark it is */
+/* a line of text against a rule, not a panel; the colour says which kind */
 .banner { border-left: 2px solid var(--warn); padding: 2px 0 2px 12px; margin-bottom: 14px; font-size: 12.5px; }
 /* the live thumb modifier, called out above the board it is changing */
 .armed-bar { border-left: 2px solid var(--accent); padding: 2px 0 2px 12px; margin-bottom: 12px; font-size: 12.5px; }
@@ -105,9 +104,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
   padding: 2px; overflow: hidden; font: inherit; text-align: center;
 }
 .key:hover, .key:focus-visible { border-color: var(--accent); border-left-color: var(--kc, var(--accent)); outline: none; }
-/* pinned, entry and differs-by-OS all mark a key without changing its legend.
-   They are outlines rather than shadows so a key stays a flat rectangle, and so
-   a key that is two of the three at once still reads as one shape. */
+/* outlines rather than shadows, so a key that is pinned and an entry and
+   differs by OS all at once still reads as one flat rectangle */
 .key[data-pinned="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
 .key .tap { font-size: calc(var(--u) * 0.21); font-weight: 600; line-height: 1.1; color: var(--kc, var(--ink)); }
 .key .hold {
@@ -122,7 +120,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 /* the modifier itself */
 .key.armed { outline: 2px solid var(--accent); outline-offset: -1px; }
 .key.armed .hold { color: var(--accent); }
-/* what it changes: the key keeps its own legend and gains the command it sends */
+/* what it changes: same legend, plus the command it now sends */
 .key.changed { border-left-color: var(--accent); }
 .key .alt {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -130,11 +128,11 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
   margin-top: 2px; padding-top: 2px; width: 84%;
   border-top: 1px solid var(--line);
 }
-/* and what it kills: dead for as long as the modifier is live */
+/* and what it kills */
 .key.dead { opacity: 0.45; }
 
 .key.blocked { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--c-blocked) 4px, var(--c-blocked) 5px); border-left-color: var(--line); cursor: default; }
-/* the ↓ below says it falls through; the legend itself does not need to shout */
+/* the ↓ below already says it falls through */
 .key.transparent .tap { opacity: 0.75; }
 .key.transparent::after { content: "↓"; position: absolute; top: 2px; right: 4px; font-size: 10px; color: var(--ink-faint); }
 
@@ -160,8 +158,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 /* the row that only exists while a modifier is armed */
 .detail .under { color: var(--accent); }
 .detail .empty { color: var(--ink-faint); }
-/* the category name, in the category's own colour -- the colour is the label,
-   so it does not need a pill drawn round it as well */
+/* the category name, in the category's own colour -- no pill needed */
 .chip { font-size: 11px; color: var(--kc, var(--ink-soft)); font-weight: 600; }
 
 /* ---- footer ---- */
@@ -219,8 +216,8 @@ const state = {
   hovered: null,
   showDiff: false,
   showGhost: false,
-  // Key index of the thumb modifier being held, or null. It belongs to the
-  // layer it is on, so changing layer drops it -- exactly as the keyboard does.
+  // Key index of the thumb modifier being held, or null. Changing layer drops
+  // it, as the keyboard does.
   armed: null,
 };
 
@@ -235,8 +232,7 @@ const armedMod = () => currentGroup().mods.find((m) => m.key === state.armed) ??
 const overrideAt = (mod, i) => (mod && i in mod.overrides ? mod.overrides[i] : undefined);
 
 function arm(i) {
-  // Only one can ever be live, on the keyboard and here: the C clears tmux_mod
-  // rather than stacking it.
+  // Only one is ever live: tmux_mod is replaced rather than stacked.
   state.armed = state.armed === i ? null : i;
   render();
 }
@@ -332,9 +328,8 @@ function renderBoard() {
       if (diff.has(i)) cls.push('diff');
       if (entry.has(i)) cls.push('entry');
 
-      // The modifier keeps its own legend and lights up; the keys it changes
-      // keep theirs too and gain a second line, because the arrow on the cap
-      // does not move -- only what it sends does.
+      // Legends stay put and gain a line: the arrow on the cap does not move,
+      // only what it sends.
       const change = overrideAt(mod, i);
       if (mod && mod.key === i) cls.push('armed');
       if (change) cls.push('changed');
@@ -364,8 +359,7 @@ function renderArmed() {
   const mod = armedMod();
   if (!mod) { $('armed').innerHTML = ''; return; }
 
-  // Held and toggled modifiers are the same picture here but not on the
-  // keyboard, and which one you are looking at decides what releases it.
+  // Held and toggled look the same here but not on the keyboard.
   const how = mod.via === 'hold'
     ? 'is held down. On the keyboard you would be holding that thumb; let go and the keys below go back to what they were.'
     : 'is toggled on. On the keyboard it stays on until you tap it again or change mode.';
@@ -395,8 +389,8 @@ function renderDetail() {
   if (k.tap) rows.push(['Tap', esc(k.tap.desc)]);
   if (k.hold) rows.push(['Hold', esc(k.hold.desc)]);
 
-  // What this key sends instead while the armed modifier is live. It goes above
-  // the source, because right now it is the truer answer of the two.
+  // What it sends instead while a modifier is live -- above the source,
+  // because right now it is the truer answer of the two.
   const mod = armedMod();
   const change = overrideAt(mod, i);
   if (change !== undefined) {
@@ -498,8 +492,7 @@ $('board').addEventListener('click', (e) => {
   const key = e.target.closest('.key');
   if (!key || key.classList.contains('blocked')) return;
   const i = Number(key.dataset.i);
-  // A thumb modifier is held rather than pinned: clicking it is the page's
-  // stand-in for putting your thumb on it.
+  // A thumb modifier is held rather than pinned.
   if (currentGroup().mods.some((m) => m.key === i)) { arm(i); return; }
   state.pinned = state.pinned === i ? null : i;
   renderBoard();

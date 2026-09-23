@@ -27,8 +27,7 @@ enum custom_keycodes {
     TM_COPY,
     TM_EXIT,
     TM_DTCH,
-    // Not a mode key, but it ends in one: it puts Claude into transcript mode
-    // and opens copy mode over the top of it. Only PANE has it.
+    // Claude's transcript, with copy mode over the top of it. PANE only.
     TM_TRSC,
     // PANE mode.
     TP_UP,
@@ -215,11 +214,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 #define TMUX_PREFIX C(KC_B)
 
-// How long to give Claude to draw its transcript before copy mode freezes the
-// pane over the top of it. Typed by hand the two keys are a human apart and
-// this does not come up; sent as a macro they are not, and copy mode was
-// opening on the screen from before the transcript arrived. Raise it if the
-// machine is loaded enough to still lose the race.
+// Copy mode freezes the pane as it opens, so Claude needs a gap to draw the
+// transcript first. Raise it if a loaded machine still loses the race.
 #define TRANSCRIPT_RENDER_MS 300
 
 // Which mode layer sits on top of _TMUX, or TMUX_OFF when tmux mode is off.
@@ -245,6 +241,10 @@ static uint8_t tmux_mod = TMOD_NONE;
 // to answer with. So a kill is two presses of the same key: one to ask, one to
 // answer. True between those two presses.
 static bool tmux_kill_pending = false;
+
+// Copy mode opened over Claude's transcript has to put the transcript away on
+// the way out. Copy mode opened any other way has nothing to put away.
+static bool tmux_transcript = false;
 
 // New panes and windows open where the current pane is.
 #define TMUX_CWD " -c '#{pane_current_path}'"
@@ -275,6 +275,12 @@ static void tmux_quit_mode(void) {
 // Move the layers only, for the keys that have already dealt with tmux
 // themselves. tmux_switch_mode below is the one that opens the new mode.
 static void tmux_set_mode(uint8_t mode) {
+    // Every way out of copy mode comes through here, and each of them has
+    // already left copy mode by now, so Claude is listening again.
+    if (tmux_transcript && mode != _TMUX_COPY) {
+        tap_code16(C(KC_O));
+        tmux_transcript = false;
+    }
     layer_off(_TMUX_TREE);
     layer_off(_TMUX_WINDOW);
     layer_off(_TMUX_PANE);
@@ -395,14 +401,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_set_mode(TMUX_OFF);
             return false;
         // Ctrl-O is Claude's own transcript toggle, so it goes to the program
-        // rather than through the prefix. The transcript is printed into the
-        // pane, so opening copy mode after it leaves the scrollback sitting on
-        // it and the arrows ready to scroll back through it -- but only after
-        // it has actually been printed, hence the wait.
+        // rather than through the prefix. Leaving copy mode sends it again.
         case TM_TRSC:
             tap_code16(C(KC_O));
             wait_ms(TRANSCRIPT_RENDER_MS);
             tmux_switch_mode(_TMUX_COPY);
+            tmux_transcript = true;
             return false;
 
         // swap-pane takes the neighbour as -s rather than -t so that focus ends
