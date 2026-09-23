@@ -263,29 +263,24 @@ static void tmux_cmd(const char *cmd) {
     tap_code(KC_ENT);
 }
 
-// Call once copy mode has just been left, whichever key left it: the pane is
-// back in the shell, so Claude can hear the Ctrl-O that puts its transcript
-// away. Does nothing unless the keyboard is what opened the transcript.
-static void tmux_close_transcript(void) {
-    if (tmux_transcript) {
-        tap_code16(C(KC_O));
-        tmux_transcript = false;
-    }
-}
-
 // TREE and COPY put the pane into a real tmux mode rather than just changing
 // what the keyboard sends, so the pane has to be taken back out of it before
 // anything else happens.
 static void tmux_quit_mode(void) {
     if (tmux_mode == _TMUX_TREE || tmux_mode == _TMUX_COPY) {
         tap_code(KC_Q);
-        tmux_close_transcript();
     }
 }
 
 // Move the layers only, for the keys that have already dealt with tmux
 // themselves. tmux_switch_mode below is the one that opens the new mode.
 static void tmux_set_mode(uint8_t mode) {
+    // Every way out of copy mode comes through here, and each of them has
+    // already left copy mode by now, so Claude is listening again.
+    if (tmux_transcript && mode != _TMUX_COPY) {
+        tap_code16(C(KC_O));
+        tmux_transcript = false;
+    }
     layer_off(_TMUX_TREE);
     layer_off(_TMUX_WINDOW);
     layer_off(_TMUX_PANE);
@@ -545,14 +540,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TC_COPY:
             // Enter is copy-pipe-and-cancel, so copy mode is already gone.
             tap_code(KC_ENT);
-            tmux_close_transcript();
             tmux_set_mode(_TMUX_PANE);
             return false;
         case TC_PSTE:
-            // The transcript goes away before the paste, so the buffer lands in
-            // the prompt rather than behind the transcript.
             tap_code(KC_Q);
-            tmux_close_transcript();
             tmux_key(KC_RBRC);
             tmux_set_mode(TMUX_OFF);
             return false;
