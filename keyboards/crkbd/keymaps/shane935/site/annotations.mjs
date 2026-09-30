@@ -12,14 +12,14 @@
 //
 // A module rather than JSON so it can carry comments and multi-line prose.
 
-// tmux mode is one state with four faces, so all four tabs say the same thing
+// tmux mode is one state with five faces, so all five tabs say the same thing
 // about it.
 const TMUX_BANNER = {
     title: 'tmux mode is a toggle, not a hold.',
     body:
         'It stays on until Exit or Detach, and everything hatched below is dead while it is. ' +
-        'The four mode keys and Exit live on the shared _TMUX layer underneath, which is why ' +
-        'they show through as transparent on all four modes and sit on the same keys in each. ' +
+        'The five mode keys and Exit live on the shared _TMUX layer underneath, which is why ' +
+        'they show through as transparent on all five modes and sit on the same keys in each. ' +
         'The OLED prints which mode you are in, and which thumb modifier is live.',
 };
 
@@ -29,7 +29,7 @@ export default {
     //
     // _TMUX has no tab of its own: it is never on without exactly one mode
     // layer above it, so a tab for it would be a state you cannot be in. It is
-    // claimed by being stacked under all four modes instead.
+    // claimed by being stacked under all five modes instead.
     baseGroup: 'base',
     groups: [
         { id: 'base', title: 'Base', short: 'BASE', mac: '_MAC', linux: '_LINUX' },
@@ -39,6 +39,7 @@ export default {
         { id: 'pane', title: 'Tmux · Pane', short: 'PANE', shared: '_TMUX_PANE', under: ['_TMUX'] },
         { id: 'window', title: 'Tmux · Window', short: 'WINDOW', shared: '_TMUX_WINDOW', under: ['_TMUX'] },
         { id: 'tree', title: 'Tmux · Tree', short: 'TREE', shared: '_TMUX_TREE', under: ['_TMUX'] },
+        { id: 'app', title: 'Tmux · App', short: 'APP', shared: '_TMUX_APP', under: ['_TMUX'] },
         { id: 'copy', title: 'Tmux · Copy', short: 'COPY', shared: '_TMUX_COPY', under: ['_TMUX'] },
     ],
 
@@ -66,6 +67,9 @@ export default {
             'left thumbs are held modifiers for making and moving windows.',
         tree: 'choose-tree, driven by its own key table, so most of this layer is plain keys ' +
             'sent straight through.',
+        app: 'The program in the pane rather than tmux itself: Claude Code or hunk, whichever ' +
+            'the App key last selected. The arrows scroll and jump through it, and the two left ' +
+            'thumbs are held modifiers that say how far.',
         copy: 'tmux scrollback, driven by copy-mode-vi. The two left thumbs are toggles rather ' +
             'than holds, and they change what the arrows mean.',
     },
@@ -74,6 +78,7 @@ export default {
         pane: TMUX_BANNER,
         window: TMUX_BANNER,
         tree: TMUX_BANNER,
+        app: TMUX_BANNER,
         copy: TMUX_BANNER,
     },
 
@@ -127,12 +132,27 @@ export default {
             note: 'Switches the keyboard to Pane mode, the mode tmux mode starts in. Like ' +
                 'Window mode it opens nothing; it only changes what the keys send.',
         },
+        TM_APP: {
+            label: 'App',
+            desc: 'App mode — drive the program in the pane',
+            target: '_TMUX_APP',
+            note: 'Switches the keyboard to App mode, which sends keys to the program running in ' +
+                'the focused pane rather than to tmux. Nothing is sent on the way in: you land ' +
+                'on whichever program was last selected. Tapping it again flips between Claude ' +
+                'and hunk instead of leaving the mode, and flipping back to Claude also declares ' +
+                "its transcript viewer closed — App twice is the resync for when Claude's own " +
+                'Escape closed it. The OLED prints CLAUDE, TRSC or HUNK.',
+        },
         TM_COPY: {
             label: 'Copy',
             desc: "Copy mode — tmux's scrollback",
             target: '_TMUX_COPY',
             note: 'Sends prefix [ to put the pane into copy mode and switches the keyboard to ' +
-                'Copy mode. Tapping it again sends q to leave copy mode and drops back to Pane.',
+                'Copy mode. Tapping it again sends q to leave copy mode and drops back to Pane. ' +
+                "From App mode with Claude's transcript viewer open it sends a bare [ first: " +
+                "inside the viewer that writes the whole conversation into the terminal's own " +
+                'scrollback, so the copy mode it then opens holds all of it rather than the one ' +
+                'screen Claude happens to be drawing.',
         },
         TM_EXIT: {
             label: 'Exit',
@@ -152,14 +172,15 @@ export default {
         },
         TM_TRSC: {
             label: 'Claude',
-            desc: "Claude's transcript, in copy mode",
-            target: '_TMUX_COPY',
-            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, and then opens " +
-                'copy mode over the top of it. Ctrl-O goes to Claude rather than through the ' +
-                'tmux prefix. Claude prints the transcript into the pane, so copy mode lands on ' +
-                'it with the arrows ready to scroll back — and Copy or Paste then take a piece ' +
-                'of it out. Pane mode is the only place this key exists, because a pane running ' +
-                'Claude is the only place it means anything.',
+            desc: "Claude's transcript viewer, in App mode",
+            target: '_TMUX_APP',
+            note: "Sends Ctrl-O, which is Claude Code's own transcript toggle, and lands in App " +
+                'mode driving Claude. Ctrl-O goes to the program rather than through the tmux ' +
+                'prefix. It is a toggle, so pressing it in a pane whose viewer is already open ' +
+                'closes it again and App mode still agrees about which. It used to open copy mode ' +
+                'instead, which was useless: Claude draws on the alternate screen, so copy mode ' +
+                'only ever saw the frame sitting on it. Pane mode is the only place this key ' +
+                'exists, because a pane running Claude is the only place it means anything.',
         },
 
         // --- Pane mode -----------------------------------------------------
@@ -340,6 +361,88 @@ export default {
             note: 'A toggle, like Word. Left and right go to the start and end of the line, ' +
                 'and up and down go a page at a time.',
         },
+
+        // --- App mode ------------------------------------------------------
+        TA_UP: {
+            label: '↑',
+            desc: 'Up a line',
+            note: 'An arrow rather than k, because both programs take arrows and an arrow is ' +
+                "harmless in Claude's prompt where a letter would be typed into the message. " +
+                'Half and Full change how far it goes.',
+        },
+        TA_DOWN: {
+            label: '↓',
+            desc: 'Down a line',
+            note: 'A down arrow, like Up. Half and Full change how far it goes.',
+        },
+        TA_LEFT: {
+            label: '←',
+            desc: 'Previous prompt, or previous hunk',
+            note: "{ in Claude's transcript viewer — back one prompt. In hunk it is [ , the " +
+                'previous hunk, and Half and Full make it the previous annotated hunk and the ' +
+                "previous file. In Claude's prompt with the viewer closed there is nothing to " +
+                'jump between, so it sends nothing at all whatever is held.',
+        },
+        TA_RGHT: {
+            label: '→',
+            desc: 'Next prompt, or next hunk',
+            note: '} in the transcript viewer, ] in hunk, and dead in the prompt — the mirror ' +
+                'of Left.',
+        },
+        TA_NEXT: {
+            label: 'n',
+            desc: 'Next search match',
+            note: 'n — the next match of the last search. Only a key inside a viewer: with ' +
+                "Claude's transcript closed it sends nothing, because in the prompt it would " +
+                'type an n into the message.',
+        },
+        TA_PREV: {
+            label: 'N',
+            desc: 'Previous search match',
+            note: 'N — the previous match. Suppressed in the prompt like n.',
+        },
+        TA_SRCH: {
+            label: '/',
+            desc: 'Search',
+            note: "/ starts a search in Claude's transcript viewer, and searches the diff " +
+                'content in hunk. Suppressed in the prompt like n and N.',
+        },
+        TA_LAST: {
+            label: 'Last',
+            desc: 'Back to the pane you were in before',
+            note: 'prefix ; — the one key on this layer that talks to tmux rather than to the ' +
+                'program, because the program you want next is usually the one in the pane you ' +
+                'were just in. It flips the selected program with it, on the assumption that the ' +
+                'other pane holds the other program; TA_LAST_FLIPS_APP at the top of keymap.c ' +
+                'turns that off if it stops being true.',
+        },
+        TA_TRSC: {
+            label: 'Trsc',
+            desc: "Open or close Claude's transcript viewer",
+            note: 'Sends Ctrl-O, which toggles the viewer, and flips the record of whether it is ' +
+                'open with it — the OLED moves between CLAUDE and TRSC. hunk has no second ' +
+                'screen to open, so the key is dead there.',
+        },
+        TA_ESC: {
+            label: 'Back',
+            desc: 'Escape in hunk; close the viewer in Claude',
+            note: 'A real Escape in hunk. In Claude it sends Ctrl-O instead, exactly as Trsc ' +
+                'does, because Escape there interrupts whatever turn is running — no key on this ' +
+                'layer ever sends Claude an Escape.',
+        },
+        TA_HALF: {
+            hold: { label: 'Half', desc: 'Held: the arrows move half a screen' },
+            note: 'Held, not tapped, like the Pane and Window thumb modifiers. Nothing held is ' +
+                'the smallest unit; Half is half a screen up and down, and one step up the ' +
+                'structure left and right. Which key that is depends on which program is being ' +
+                'driven, so the board above shows the unit rather than the keystroke.',
+        },
+        TA_FULL: {
+            hold: { label: 'Full', desc: 'Held: the arrows move a whole screen' },
+            note: 'Held. A whole screen up and down, and the largest jump left and right — the ' +
+                'previous or next file in hunk. Releasing it clears the modifier, and so does ' +
+                'changing mode.',
+        },
     },
 
     // What the thumb modifiers do to the keys around them.
@@ -401,6 +504,22 @@ export default {
             TC_UP: { sub: 'PgUp', desc: 'Page Up — back a screenful' },
             TC_DOWN: { sub: 'PgDn', desc: 'Page Down — forward a screenful' },
         },
+        // App mode's two are the one place a modifier cannot be reduced to a
+        // keystroke: the same unit is Ctrl-U to Claude's viewer, u to hunk and
+        // Page Up to Claude's prompt. So `sub` names the unit and the
+        // description spells out all three.
+        TA_HALF: {
+            TA_UP: { sub: '½ screen ↑', desc: "Ctrl-U in the transcript viewer, u in hunk, Page Up in Claude's prompt" },
+            TA_DOWN: { sub: '½ screen ↓', desc: "Ctrl-D in the transcript viewer, d in hunk, Page Down in Claude's prompt" },
+            TA_LEFT: { sub: '{ · annot', desc: 'The previous annotated hunk in hunk; still { , the previous prompt, in the transcript viewer' },
+            TA_RGHT: { sub: '} · annot', desc: 'The next annotated hunk in hunk; still } , the next prompt, in the transcript viewer' },
+        },
+        TA_FULL: {
+            TA_UP: { sub: 'screen ↑', desc: "b — back a whole screen; Page Up in Claude's prompt" },
+            TA_DOWN: { sub: 'screen ↓', desc: "Space — forward a whole screen; Page Down in Claude's prompt" },
+            TA_LEFT: { sub: ', · file', desc: 'The previous file in hunk; still { in the transcript viewer' },
+            TA_RGHT: { sub: '. · file', desc: 'The next file in hunk; still } in the transcript viewer' },
+        },
     },
 
     // Keyed by "<group>:<key index>", for the things that are about one
@@ -441,10 +560,24 @@ export default {
         {
             title: 'The OLED',
             body: 'The master half prints the label OS, then MAC or LINUX, then the tmux mode ' +
-                'and thumb modifier if tmux mode is on — TREE, WINDOW, PANE or COPY, followed ' +
-                'by RESIZE, SPLIT, MOVE, NEW, WORD or LINE — then CAPS while Caps Word is ' +
+                'and thumb modifier if tmux mode is on — TREE, WINDOW, PANE or COPY, or CLAUDE, ' +
+                'TRSC or HUNK for App mode, followed by RESIZE, SPLIT, MOVE, NEW, WORD, LINE, ' +
+                'HALF or FULL — then CAPS while Caps Word is ' +
                 'active. Blank lines mean neither is on. The tmux layers are toggled rather ' +
                 'than held, so this line is the only way to tell which mode you are in.',
+        },
+        {
+            title: 'App mode drives the program, not tmux',
+            body: 'Every other mode sends the prefix; App mode sends keys straight to whatever is ' +
+                'running in the focused pane, and what they mean turns on two things the keymap ' +
+                'cannot show. Which program — Claude Code or hunk — is a toggle on the App key ' +
+                'itself, and it survives leaving the mode. Whether Claude\'s transcript viewer is ' +
+                'open has to be remembered, because Claude draws on the alternate screen and the ' +
+                'keyboard cannot see it: every key that opens or closes the viewer sends Ctrl-O ' +
+                'and flips that record with it. Only Claude\'s own Escape can put the two out of ' +
+                'step, which is what App twice resyncs by declaring the viewer closed. Nothing on ' +
+                'the layer sends q, which would quit hunk, or Escape to Claude, which would ' +
+                'interrupt the running turn.',
         },
         {
             title: 'Every tmux key is prefix plus one key',
@@ -455,9 +588,9 @@ export default {
         },
         {
             title: 'The thumb modifiers',
-            body: 'Pane and Window put modifiers on the left thumbs and Copy puts two more ' +
+            body: 'Pane, Window and App put modifiers on the left thumbs and Copy puts two more ' +
                 'there, and they are the part of this keymap you cannot see: they change what ' +
-                'the arrows send without changing the arrows. Pane and Window hold theirs; ' +
+                'the arrows send without changing the arrows. Pane, Window and App hold theirs; ' +
                 'Copy toggles its own. Only one can ever be live, and changing mode always ' +
                 'clears it, so a Copy toggle cannot survive into Pane. Click one on the board ' +
                 'above to hold it down: the keys it changes will say what they send instead, ' +
@@ -481,7 +614,7 @@ export default {
                 'modifiers, the Nav layer bottom row (Mac sends Command+Z/X/C/V/F, Linux sends ' +
                 'the dedicated Undo/Cut/Copy/Paste/Find keys), and a Ctrl/Super swap on the ' +
                 'Numbers home row. Use the "differs by OS" toggle to see exactly which keys. ' +
-                'The five tmux layers are the exception — they are shared, because the tmux ' +
+                'The six tmux layers are the exception — they are shared, because the tmux ' +
                 'prefix is Ctrl on both.',
         },
     ],
