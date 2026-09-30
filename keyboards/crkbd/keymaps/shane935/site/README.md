@@ -37,7 +37,7 @@ only mean something because tmux is reading them.
 
 Groups may set `under`, the stack of layers they sit on top of. `_TMUX` has no
 tab of its own — tmux mode is never on without exactly one mode layer above it
-— so it is claimed by being stacked under all four modes, and transparency
+— so it is claimed by being stacked under all five modes, and transparency
 resolves through it before falling back to the base layer.
 
 ## Files

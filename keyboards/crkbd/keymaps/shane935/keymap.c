@@ -14,6 +14,7 @@ enum layers {
     _TMUX_TREE,
     _TMUX_WINDOW,
     _TMUX_PANE,
+    _TMUX_APP,
     _TMUX_COPY,
 };
 
@@ -24,11 +25,12 @@ enum custom_keycodes {
     TM_TREE,
     TM_WIN,
     TM_PANE,
+    TM_APP,
     TM_COPY,
     TM_EXIT,
     TM_DTCH,
-    // Not a mode key, but it ends in one: it puts Claude into transcript mode
-    // and opens copy mode over the top of it. Only PANE has it.
+    // Not a mode key, but it ends in one: it opens Claude's transcript viewer
+    // and lands in APP mode with it. Only PANE has it.
     TM_TRSC,
     // PANE mode.
     TP_UP,
@@ -62,6 +64,18 @@ enum custom_keycodes {
     TC_PSTE,
     TC_WORD,
     TC_LINE,
+    // APP mode. It drives the program in the pane rather than tmux, so every
+    // one of these sends keys to the program with no prefix in front of them.
+    TA_UP,
+    TA_DOWN,
+    TA_LEFT,
+    TA_RGHT,
+    TA_NEXT,
+    TA_PREV,
+    TA_SRCH,
+    TA_TRSC,
+    TA_HALF,
+    TA_FULL,
 };
 
 // Thumbs: space = nav, enter = numbers
@@ -150,7 +164,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      TM_EXIT,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          TM_TREE,       TM_WIN,      TM_PANE,      TM_COPY,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
+          TM_TREE,       TM_WIN,      TM_PANE,       TM_APP,      TM_COPY,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -165,7 +179,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     XXXXXXX,   A(KC_MINS),        KC_UP,   A(KC_PLUS),      TT_KILL,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      _______,                                     XXXXXXX,      KC_LEFT,      KC_DOWN,      KC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -177,7 +191,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TW_LAST,      XXXXXXX,        TW_UP,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      TM_DTCH,
+          _______,      _______,      _______,      _______,      _______,                                     XXXXXXX,      TW_LEFT,      TW_DOWN,      TW_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -189,11 +203,27 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,      TM_TRSC,       TP_LYT,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      TM_DTCH,
+          _______,      _______,      _______,      _______,      _______,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,       TP_BRK,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
                                                     TP_RSZE,      TP_SPLT,      TP_MOVE,         XXXXXXX,      XXXXXXX,       XXXXXXX
+                                            //`-----------------------------------------'  `-----------------------------------------'
+  ),
+
+    // App mode drives the program in the focused pane instead of tmux, so
+    // nothing here goes through the prefix. What each key sends depends on which
+    // program tmux_app says is there and, for Claude, on whether its transcript
+    // viewer is open; the tables in process_record_user are the whole story.
+    [_TMUX_APP] = LAYOUT_split_3x5_3(
+  //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TA_NEXT,      XXXXXXX,        TA_UP,      TA_TRSC,      XXXXXXX,
+  //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
+          _______,      _______,      _______,      _______,      _______,                                     TA_PREV,      TA_LEFT,      TA_DOWN,      TA_RGHT,      XXXXXXX,
+  //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      TA_SRCH,
+  //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
+                                                    TA_HALF,      TA_FULL,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   ),
 
@@ -203,7 +233,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                        KC_N,       KC_SPC,        TC_UP,      S(KC_V),       KC_ESC,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      XXXXXXX,                                     S(KC_N),      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      _______,                                     S(KC_N),      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -220,9 +250,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #define TMUX_OFF 0
 static uint8_t tmux_mode = TMUX_OFF;
 
-// The left thumb modifier in effect. PANE and WINDOW hold theirs, COPY toggles
-// its own, and only ever one at a time. PANE and WINDOW both call their inner
-// thumb MOVE and neither can be on while the other is, so they share a value.
+// The left thumb modifier in effect. PANE, WINDOW and APP hold theirs, COPY
+// toggles its own, and only ever one at a time. PANE and WINDOW both call their
+// inner thumb MOVE and neither can be on while the other is, so they share a
+// value.
 enum tmux_modifier {
     TMOD_NONE,
     TMOD_RESIZE,
@@ -231,8 +262,27 @@ enum tmux_modifier {
     TMOD_NEW,
     TMOD_WORD,
     TMOD_LINE,
+    TMOD_HALF,
+    TMOD_FULL,
 };
 static uint8_t tmux_mod = TMOD_NONE;
+
+// Which program APP mode is driving. It outlives a mode switch, so coming back
+// to APP lands on whatever was last selected, and the mode key is what cycles
+// it.
+enum tmux_apps {
+    TAPP_CLAUDE,
+    TAPP_HUNK,
+};
+static uint8_t tmux_app = TAPP_CLAUDE;
+
+// Whether Claude's transcript viewer is open. Claude draws on the alternate
+// screen, so the keyboard cannot see what state it is in and has to remember.
+// TA_TRSC is the only way it becomes true, and it becomes true by sending the
+// Ctrl-O that opens the viewer, so the two cannot disagree unless Claude's own
+// Esc closes it. A stale true is the dangerous direction -- it is what would
+// send Ctrl-D to a live prompt -- so the mode key can only ever set it false.
+static bool tmux_transcript = false;
 
 // Killing raises tmux's own "(y/n)" prompt, and the tree layer has no y on it
 // to answer with. So a kill is two presses of the same key: one to ask, one to
@@ -271,6 +321,7 @@ static void tmux_set_mode(uint8_t mode) {
     layer_off(_TMUX_TREE);
     layer_off(_TMUX_WINDOW);
     layer_off(_TMUX_PANE);
+    layer_off(_TMUX_APP);
     layer_off(_TMUX_COPY);
     if (mode == TMUX_OFF) {
         layer_off(_TMUX);
@@ -303,6 +354,41 @@ static void tmux_pane_arrow(uint16_t arrow, const char *resize, const char *spli
     }
 }
 
+// One APP key's row of the size table: what it sends with nothing held, with
+// HALF held and with FULL held. KC_NO means it sends nothing in that state.
+typedef struct {
+    uint16_t bare;
+    uint16_t half;
+    uint16_t full;
+} tmux_app_row_t;
+
+// The arrows take one row per state the layer can be read in, because the same
+// jump is a different key to Claude's prompt, Claude's transcript viewer and
+// hunk. Everything context-dependent about the layer goes through here.
+static void tmux_app_arrow(tmux_app_row_t viewer, tmux_app_row_t prompt, tmux_app_row_t hunk) {
+    tmux_app_row_t row     = (tmux_app == TAPP_HUNK) ? hunk : (tmux_transcript ? viewer : prompt);
+    uint16_t       keycode = (tmux_mod == TMOD_HALF) ? row.half : (tmux_mod == TMOD_FULL) ? row.full : row.bare;
+    if (keycode != KC_NO) {
+        tap_code16(keycode);
+    }
+}
+
+// n, N and / are only keys inside a viewer. In Claude's prompt with the
+// transcript closed they would be typed into the message instead, so there they
+// send nothing at all.
+static void tmux_app_search(uint16_t keycode) {
+    if (tmux_app == TAPP_HUNK || tmux_transcript) {
+        tap_code16(keycode);
+    }
+}
+
+// Ctrl-O is Claude's own transcript toggle and the only thing this layer ever
+// sends it: Esc would interrupt whatever turn is running.
+static void tmux_app_toggle_transcript(void) {
+    tap_code16(C(KC_O));
+    tmux_transcript = !tmux_transcript;
+}
+
 static void tmux_switch_mode(uint8_t mode) {
     tmux_quit_mode();
     tmux_set_mode(mode);
@@ -325,8 +411,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         tmux_kill_pending = false;
     }
 
-    // PANE's and WINDOW's thumb modifiers are held, so they are the only keys
-    // that have anything to do on the release.
+    // PANE's, WINDOW's and APP's thumb modifiers are held, so they are the only
+    // keys that have anything to do on the release.
     switch (keycode) {
         case TP_RSZE:
             tmux_mod = record->event.pressed ? TMOD_RESIZE : TMOD_NONE;
@@ -340,6 +426,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case TW_NEW:
             tmux_mod = record->event.pressed ? TMOD_NEW : TMOD_NONE;
+            return false;
+        case TA_HALF:
+            tmux_mod = record->event.pressed ? TMOD_HALF : TMOD_NONE;
+            return false;
+        case TA_FULL:
+            tmux_mod = record->event.pressed ? TMOD_FULL : TMOD_NONE;
             return false;
     }
 
@@ -374,7 +466,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tmux_switch_mode(_TMUX_PANE);
             }
             return false;
+        // Once in APP, the same key flips which program is being driven rather
+        // than leaving the mode. It only ever declares -- it sends nothing,
+        // because the pane a keystroke would land in is not necessarily the one
+        // the state is being moved to. Flipping to Claude also declares its
+        // viewer closed, which is both the resync for a viewer Claude's own Esc
+        // closed and the only state this key can put the flag into: false is the
+        // safe direction to be wrong in, and TA_TRSC is the only way to true.
+        case TM_APP:
+            if (tmux_mode != _TMUX_APP) {
+                tmux_switch_mode(_TMUX_APP);
+            } else if (tmux_app == TAPP_CLAUDE) {
+                tmux_app = TAPP_HUNK;
+            } else {
+                tmux_app        = TAPP_CLAUDE;
+                tmux_transcript = false;
+            }
+            return false;
         case TM_COPY:
+            // Inside Claude's transcript viewer [ writes the whole conversation
+            // into the terminal's own scrollback, which is the only way copy
+            // mode gets to see more than the frame Claude is currently drawing.
+            if (tmux_mode == _TMUX_APP && tmux_app == TAPP_CLAUDE && tmux_transcript) {
+                tap_code(KC_LBRC);
+            }
             tmux_switch_mode(tmux_mode == _TMUX_COPY ? _TMUX_PANE : _TMUX_COPY);
             return false;
         case TM_EXIT:
@@ -387,13 +502,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_key(KC_D);
             tmux_set_mode(TMUX_OFF);
             return false;
-        // Ctrl-O is Claude's own transcript toggle, so it goes to the program
-        // rather than through the prefix. The transcript is printed into the
-        // pane, so opening copy mode straight after leaves the scrollback
-        // sitting on it and the arrows ready to scroll back through it.
+        // The way in to Claude. Ctrl-O is a toggle, so the flag toggles with it
+        // rather than being forced on: press it in a pane whose viewer is
+        // already open and this closes it, with APP still agreeing about which.
         case TM_TRSC:
-            tap_code16(C(KC_O));
-            tmux_switch_mode(_TMUX_COPY);
+            tmux_app_toggle_transcript();
+            tmux_app = TAPP_CLAUDE;
+            tmux_switch_mode(_TMUX_APP);
             return false;
 
         // swap-pane takes the neighbour as -s rather than -t so that focus ends
@@ -534,6 +649,43 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_key(KC_RBRC);
             tmux_set_mode(TMUX_OFF);
             return false;
+
+        // The four arrows, each handing over its three rows in the order the
+        // viewer, the prompt and hunk read them. Arrows rather than j/k: both
+        // programs accept arrows, and an arrow is harmless in Claude's prompt
+        // where a letter would be typed into the message.
+        case TA_UP:
+            tmux_app_arrow((tmux_app_row_t){KC_UP, C(KC_U), KC_B}, (tmux_app_row_t){KC_UP, KC_PGUP, KC_PGUP}, (tmux_app_row_t){KC_UP, KC_U, KC_B});
+            return false;
+        case TA_DOWN:
+            tmux_app_arrow((tmux_app_row_t){KC_DOWN, C(KC_D), KC_SPC}, (tmux_app_row_t){KC_DOWN, KC_PGDN, KC_PGDN}, (tmux_app_row_t){KC_DOWN, KC_D, KC_SPC});
+            return false;
+        // Left and right jump between things rather than by distance, so the
+        // sizes read as prompt, annotated hunk, file. Claude's prompt has
+        // nothing to jump between, so there they are dead whatever is held.
+        case TA_LEFT:
+            tmux_app_arrow((tmux_app_row_t){KC_LCBR, KC_LCBR, KC_LCBR}, (tmux_app_row_t){KC_NO, KC_NO, KC_NO}, (tmux_app_row_t){KC_LBRC, KC_LCBR, KC_COMM});
+            return false;
+        case TA_RGHT:
+            tmux_app_arrow((tmux_app_row_t){KC_RCBR, KC_RCBR, KC_RCBR}, (tmux_app_row_t){KC_NO, KC_NO, KC_NO}, (tmux_app_row_t){KC_RBRC, KC_RCBR, KC_DOT});
+            return false;
+        case TA_NEXT:
+            tmux_app_search(KC_N);
+            return false;
+        case TA_PREV:
+            tmux_app_search(S(KC_N));
+            return false;
+        case TA_SRCH:
+            tmux_app_search(KC_SLSH);
+            return false;
+        // The only key that opens or closes the viewer, and so the only one that
+        // moves the flag by acting rather than by declaring. hunk has no second
+        // screen to open, so it is dead there.
+        case TA_TRSC:
+            if (tmux_app == TAPP_CLAUDE) {
+                tmux_app_toggle_transcript();
+            }
+            return false;
     }
 
     return true;
@@ -560,6 +712,18 @@ bool oled_task_user(void) {
             case _TMUX_PANE:
                 oled_write_P(PSTR("PANE"), false);
                 break;
+            // APP prints the program rather than the mode, because which one it
+            // is decides what every key on the layer sends -- and for Claude,
+            // whether the transcript viewer is open decides it too.
+            case _TMUX_APP:
+                if (tmux_app == TAPP_HUNK) {
+                    oled_write_P(PSTR("HUNK"), false);
+                } else if (tmux_transcript) {
+                    oled_write_P(PSTR("TRSC"), false);
+                } else {
+                    oled_write_P(PSTR("CLAUDE"), false);
+                }
+                break;
             case _TMUX_COPY:
                 oled_write_P(PSTR("COPY"), false);
                 break;
@@ -582,6 +746,12 @@ bool oled_task_user(void) {
                 break;
             case TMOD_LINE:
                 oled_write_P(PSTR(" LINE"), false);
+                break;
+            case TMOD_HALF:
+                oled_write_P(PSTR(" HALF"), false);
+                break;
+            case TMOD_FULL:
+                oled_write_P(PSTR(" FULL"), false);
                 break;
         }
         // A kill is waiting on its second press. tmux is showing its own prompt
