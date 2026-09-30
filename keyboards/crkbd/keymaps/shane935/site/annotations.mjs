@@ -137,11 +137,13 @@ export default {
             desc: 'App mode — drive the program in the pane',
             target: '_TMUX_APP',
             note: 'Switches the keyboard to App mode, which sends keys to the program running in ' +
-                'the focused pane rather than to tmux. Nothing is sent on the way in: you land ' +
-                'on whichever program was last selected. Tapping it again flips between Claude ' +
-                'and hunk instead of leaving the mode, and flipping back to Claude also declares ' +
-                "its transcript viewer closed — App twice is the resync for when Claude's own " +
-                'Escape closed it. The OLED prints CLAUDE, TRSC or HUNK.',
+                'the focused pane rather than to tmux. Once there, the same key cycles the three ' +
+                'states the layer can be read in — Claude, Claude with the transcript viewer ' +
+                'open, hunk — rather than leaving the mode. It only declares: it never sends ' +
+                'anything, because the pane a keystroke would land in is not necessarily the one ' +
+                "you are moving the state to. That also makes it the resync when Claude's own " +
+                'Escape closed the viewer behind the keyboard: press round the ring until the ' +
+                'OLED, which prints CLAUDE, TRSC or HUNK, matches what is on screen.',
         },
         TM_COPY: {
             label: 'Copy',
@@ -407,28 +409,15 @@ export default {
             note: "/ starts a search in Claude's transcript viewer, and searches the diff " +
                 'content in hunk. Suppressed in the prompt like n and N.',
         },
-        TA_LAST: {
-            label: 'Last',
-            desc: 'Back to the pane you were in before',
-            note: 'prefix ; — the one key on this layer that talks to tmux rather than to the ' +
-                'program, because the program you want next is usually the one in the pane you ' +
-                'were just in. It flips the selected program with it, on the assumption that the ' +
-                'other pane holds the other program; TA_LAST_FLIPS_APP at the top of keymap.c ' +
-                'turns that off if it stops being true.',
-        },
         TA_TRSC: {
             label: 'Trsc',
             desc: "Open or close Claude's transcript viewer",
             note: 'Sends Ctrl-O, which toggles the viewer, and flips the record of whether it is ' +
-                'open with it — the OLED moves between CLAUDE and TRSC. hunk has no second ' +
-                'screen to open, so the key is dead there.',
-        },
-        TA_ESC: {
-            label: 'Back',
-            desc: 'Escape in hunk; close the viewer in Claude',
-            note: 'A real Escape in hunk. In Claude it sends Ctrl-O instead, exactly as Trsc ' +
-                'does, because Escape there interrupts whatever turn is running — no key on this ' +
-                'layer ever sends Claude an Escape.',
+                'open with it — the OLED moves between CLAUDE and TRSC. The only key that moves ' +
+                'that record by acting rather than declaring, which is why it is the one to reach ' +
+                'for when you actually want the viewer rather than when you are telling the ' +
+                'keyboard what is already there. hunk has no second screen to open, so the key ' +
+                'is dead there.',
         },
         TA_HALF: {
             hold: { label: 'Half', desc: 'Held: the arrows move half a screen' },
@@ -569,15 +558,15 @@ export default {
         {
             title: 'App mode drives the program, not tmux',
             body: 'Every other mode sends the prefix; App mode sends keys straight to whatever is ' +
-                'running in the focused pane, and what they mean turns on two things the keymap ' +
-                'cannot show. Which program — Claude Code or hunk — is a toggle on the App key ' +
-                'itself, and it survives leaving the mode. Whether Claude\'s transcript viewer is ' +
-                'open has to be remembered, because Claude draws on the alternate screen and the ' +
-                'keyboard cannot see it: every key that opens or closes the viewer sends Ctrl-O ' +
-                'and flips that record with it. Only Claude\'s own Escape can put the two out of ' +
-                'step, which is what App twice resyncs by declaring the viewer closed. Nothing on ' +
-                'the layer sends q, which would quit hunk, or Escape to Claude, which would ' +
-                'interrupt the running turn.',
+                'running in the focused pane. What they mean turns on a state the keymap cannot ' +
+                'show, because neither program can be asked: which of Claude, Claude with its ' +
+                'transcript viewer open, and hunk you are driving. The App key cycles those three ' +
+                'and sends nothing, so it is a declaration about what is on screen; Trsc is the ' +
+                'one key that changes the screen, by sending Claude the Ctrl-O that opens or ' +
+                'closes the viewer. Get the two out of step — close the viewer with Claude\'s own ' +
+                'Escape, say — and the OLED is wrong until you press App round the ring again. ' +
+                'Nothing on the layer sends q, which would quit hunk, or Escape to Claude, which ' +
+                'would interrupt the running turn.',
         },
         {
             title: 'Every tmux key is prefix plus one key',

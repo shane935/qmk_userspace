@@ -18,12 +18,6 @@ enum layers {
     _TMUX_COPY,
 };
 
-// Whether Last pane also flips which program APP is driving. On, because the
-// two panes this is used in are Claude and hunk, so the other pane is the other
-// program and the toggle never has to be touched by hand. Set it to 0 if that
-// stops being true.
-#define TA_LAST_FLIPS_APP 1
-
 enum custom_keycodes {
     OS_SWAP = SAFE_RANGE,
     // Mode switching, shared by every tmux layer.
@@ -79,9 +73,7 @@ enum custom_keycodes {
     TA_NEXT,
     TA_PREV,
     TA_SRCH,
-    TA_LAST,
     TA_TRSC,
-    TA_ESC,
     TA_HALF,
     TA_FULL,
 };
@@ -225,7 +217,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // viewer is open; the tables in process_record_user are the whole story.
     [_TMUX_APP] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TA_NEXT,      TA_LAST,        TA_UP,      TA_TRSC,       TA_ESC,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TA_NEXT,      XXXXXXX,        TA_UP,      TA_TRSC,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      _______,                                     TA_PREV,      TA_LEFT,      TA_DOWN,      TA_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
@@ -276,8 +268,8 @@ enum tmux_modifier {
 static uint8_t tmux_mod = TMOD_NONE;
 
 // Which program APP mode is driving. It outlives a mode switch, so coming back
-// to APP lands on whatever was last selected, and the mode key itself is what
-// flips it.
+// to APP lands on whatever was last selected, and the mode key is what cycles
+// it.
 enum tmux_apps {
     TAPP_CLAUDE,
     TAPP_HUNK,
@@ -285,9 +277,11 @@ enum tmux_apps {
 static uint8_t tmux_app = TAPP_CLAUDE;
 
 // Whether Claude's transcript viewer is open. Claude draws on the alternate
-// screen, so the keyboard cannot see what state it is in and has to remember:
-// every key that toggles the viewer flips this with it. It can only go stale if
-// the viewer is closed by Claude's own Esc, which is what App, App resyncs.
+// screen, so the keyboard cannot see what state it is in and has to remember.
+// Together with tmux_app this is the three states the mode key cycles, and only
+// TA_TRSC moves it by actually opening or closing the viewer. It can go stale if
+// Claude's own Esc closes the viewer, and a stale true is the dangerous
+// direction: it is what would send Ctrl-D to a live prompt.
 static bool tmux_transcript = false;
 
 // Killing raises tmux's own "(y/n)" prompt, and the tree layer has no y on it
@@ -472,16 +466,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tmux_switch_mode(_TMUX_PANE);
             }
             return false;
-        // A second press flips which program APP is driving rather than leaving
-        // the mode, and flipping back to Claude declares its viewer closed --
-        // the only way to fix the flag when Claude's own Esc closed it.
+        // Once in APP, the same key cycles the three states the layer can be
+        // read in: Claude, Claude with the transcript viewer open, hunk. It only
+        // ever declares -- it sends nothing, because the pane the keys would
+        // land in is not necessarily the one the state is being moved to. So it
+        // is also the resync for a viewer Claude's own Esc closed: one more
+        // press round the ring and the flag agrees again.
         case TM_APP:
             if (tmux_mode != _TMUX_APP) {
                 tmux_switch_mode(_TMUX_APP);
-            } else if (tmux_app == TAPP_CLAUDE) {
-                tmux_app = TAPP_HUNK;
-            } else {
+            } else if (tmux_app == TAPP_HUNK) {
                 tmux_app        = TAPP_CLAUDE;
+                tmux_transcript = false;
+            } else if (!tmux_transcript) {
+                tmux_transcript = true;
+            } else {
+                tmux_app        = TAPP_HUNK;
                 tmux_transcript = false;
             }
             return false;
@@ -680,26 +680,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TA_SRCH:
             tmux_app_search(KC_SLSH);
             return false;
-        // The one key on the layer that talks to tmux rather than to the
-        // program, because the program you want next is usually in the pane you
-        // were in before.
-        case TA_LAST:
-            tmux_key(KC_SCLN);
-#if TA_LAST_FLIPS_APP
-            tmux_app = (tmux_app == TAPP_CLAUDE) ? TAPP_HUNK : TAPP_CLAUDE;
-#endif
-            return false;
-        // hunk has no second screen to open, so O is simply dead there; P is a
-        // real Esc, which hunk takes as "back out" and Claude never sees.
+        // The only key that opens or closes the viewer, and so the only one that
+        // moves the flag by acting rather than by declaring. hunk has no second
+        // screen to open, so it is dead there.
         case TA_TRSC:
             if (tmux_app == TAPP_CLAUDE) {
-                tmux_app_toggle_transcript();
-            }
-            return false;
-        case TA_ESC:
-            if (tmux_app == TAPP_HUNK) {
-                tap_code(KC_ESC);
-            } else {
                 tmux_app_toggle_transcript();
             }
             return false;
