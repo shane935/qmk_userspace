@@ -137,13 +137,13 @@ export default {
             desc: 'App mode — drive the program in the pane',
             target: '_TMUX_APP',
             note: 'Switches the keyboard to App mode, which sends keys to the program running in ' +
-                'the focused pane rather than to tmux. Once there, the same key cycles the three ' +
-                'states the layer can be read in — Claude, Claude with the transcript viewer ' +
-                'open, hunk — rather than leaving the mode. It only declares: it never sends ' +
+                'the focused pane rather than to tmux. Once there, the same key flips between ' +
+                'Claude and hunk rather than leaving the mode. It only declares: it never sends ' +
                 'anything, because the pane a keystroke would land in is not necessarily the one ' +
-                "you are moving the state to. That also makes it the resync when Claude's own " +
-                'Escape closed the viewer behind the keyboard: press round the ring until the ' +
-                'OLED, which prints CLAUDE, TRSC or HUNK, matches what is on screen.',
+                'you are moving the state to. Flipping to Claude also declares its transcript ' +
+                "viewer closed, which is the resync for when Claude's own Escape closed it behind " +
+                "the keyboard's back — App twice, and the OLED agrees with the screen again. It " +
+                'is the one thing this key can say about the viewer; only Trsc can say it is open.',
         },
         TM_COPY: {
             label: 'Copy',
@@ -414,10 +414,9 @@ export default {
             desc: "Open or close Claude's transcript viewer",
             note: 'Sends Ctrl-O, which toggles the viewer, and flips the record of whether it is ' +
                 'open with it — the OLED moves between CLAUDE and TRSC. The only key that moves ' +
-                'that record by acting rather than declaring, which is why it is the one to reach ' +
-                'for when you actually want the viewer rather than when you are telling the ' +
-                'keyboard what is already there. hunk has no second screen to open, so the key ' +
-                'is dead there.',
+                'that record by acting rather than declaring, and so the only route to TRSC at ' +
+                'all: the App key can only ever declare the viewer closed. hunk has no second ' +
+                'screen to open, so the key is dead there.',
         },
         TA_HALF: {
             hold: { label: 'Half', desc: 'Held: the arrows move half a screen' },
@@ -560,11 +559,12 @@ export default {
             body: 'Every other mode sends the prefix; App mode sends keys straight to whatever is ' +
                 'running in the focused pane. What they mean turns on a state the keymap cannot ' +
                 'show, because neither program can be asked: which of Claude, Claude with its ' +
-                'transcript viewer open, and hunk you are driving. The App key cycles those three ' +
-                'and sends nothing, so it is a declaration about what is on screen; Trsc is the ' +
-                'one key that changes the screen, by sending Claude the Ctrl-O that opens or ' +
-                'closes the viewer. Get the two out of step — close the viewer with Claude\'s own ' +
-                'Escape, say — and the OLED is wrong until you press App round the ring again. ' +
+                'transcript viewer open, and hunk you are driving. The App key flips between the ' +
+                'two programs and sends nothing, so it is a declaration about what is on screen; ' +
+                'Trsc is the one key that changes the screen, by sending Claude the Ctrl-O that ' +
+                'opens or closes the viewer, and the only one that can claim the viewer is open. ' +
+                "Get the two out of step — close the viewer with Claude's own Escape, say — and " +
+                'the OLED is wrong until you press App twice, which declares it closed again. ' +
                 'Nothing on the layer sends q, which would quit hunk, or Escape to Claude, which ' +
                 'would interrupt the running turn.',
         },

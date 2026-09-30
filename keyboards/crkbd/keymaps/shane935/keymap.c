@@ -278,10 +278,10 @@ static uint8_t tmux_app = TAPP_CLAUDE;
 
 // Whether Claude's transcript viewer is open. Claude draws on the alternate
 // screen, so the keyboard cannot see what state it is in and has to remember.
-// Together with tmux_app this is the three states the mode key cycles, and only
-// TA_TRSC moves it by actually opening or closing the viewer. It can go stale if
-// Claude's own Esc closes the viewer, and a stale true is the dangerous
-// direction: it is what would send Ctrl-D to a live prompt.
+// TA_TRSC is the only way it becomes true, and it becomes true by sending the
+// Ctrl-O that opens the viewer, so the two cannot disagree unless Claude's own
+// Esc closes it. A stale true is the dangerous direction -- it is what would
+// send Ctrl-D to a live prompt -- so the mode key can only ever set it false.
 static bool tmux_transcript = false;
 
 // Killing raises tmux's own "(y/n)" prompt, and the tree layer has no y on it
@@ -466,22 +466,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tmux_switch_mode(_TMUX_PANE);
             }
             return false;
-        // Once in APP, the same key cycles the three states the layer can be
-        // read in: Claude, Claude with the transcript viewer open, hunk. It only
-        // ever declares -- it sends nothing, because the pane the keys would
-        // land in is not necessarily the one the state is being moved to. So it
-        // is also the resync for a viewer Claude's own Esc closed: one more
-        // press round the ring and the flag agrees again.
+        // Once in APP, the same key flips which program is being driven rather
+        // than leaving the mode. It only ever declares -- it sends nothing,
+        // because the pane a keystroke would land in is not necessarily the one
+        // the state is being moved to. Flipping to Claude also declares its
+        // viewer closed, which is both the resync for a viewer Claude's own Esc
+        // closed and the only state this key can put the flag into: false is the
+        // safe direction to be wrong in, and TA_TRSC is the only way to true.
         case TM_APP:
             if (tmux_mode != _TMUX_APP) {
                 tmux_switch_mode(_TMUX_APP);
-            } else if (tmux_app == TAPP_HUNK) {
-                tmux_app        = TAPP_CLAUDE;
-                tmux_transcript = false;
-            } else if (!tmux_transcript) {
-                tmux_transcript = true;
+            } else if (tmux_app == TAPP_CLAUDE) {
+                tmux_app = TAPP_HUNK;
             } else {
-                tmux_app        = TAPP_HUNK;
+                tmux_app        = TAPP_CLAUDE;
                 tmux_transcript = false;
             }
             return false;
