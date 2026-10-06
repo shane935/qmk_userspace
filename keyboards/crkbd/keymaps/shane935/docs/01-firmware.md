@@ -1,7 +1,7 @@
 # Firmware spec (QMK keymap repo)
 
 Read `00-protocol.md` first. This describes the keymap as it should be.
-Keep the file's existing conventions (`tmux_key`, `tmux_cmd`, `tmux_mod`,
+Keep the file's existing conventions (`tmux_fkey`, `tmux_mod`,
 `tmux_set_mode`, `tmux_switch_mode`, OLED cases, comment style). The sandbox
 cannot build or flash: write the code, build in the QMK distrobox, flag
 anything that needs a hardware check.
@@ -69,11 +69,11 @@ command immediately, daemon or not. `tmux_mode` and `tmux_mod` update
 locally at the same time; the host confirms by observation (the OLED shows
 `?` until it does when the host is alive, nothing when it is not).
 
-The prefix path (`tmux_key` / `tmux_cmd`) stays in the file behind a
-compile-time switch, `TMUX_PREFIX_FALLBACK`, for terminals that do not pass
-F13+ or their modified forms through. It is off by default once the hardware
-check in the dotfiles spec passes. There is no runtime branch on host
-liveness for tmux actions.
+There is no prefix in the firmware and no second path: no `tmux_key`, no
+`tmux_cmd`, no command strings, and no compile-time switch between them. This
+is a compiled keymap — a terminal that will not pass F13+ through is a
+reflash, not a runtime state to carry. There is likewise no runtime branch on
+host liveness for tmux actions.
 
 Program-aware keys are chosen by the keyboard from `ctx` and sent as
 keystrokes; the only intent in the firmware is `TC_DEEP` → WITHIN_DEEP.
@@ -144,7 +144,7 @@ Then the key, with `mod` the held thumb:
 | NEXT / PREV | `n` / `N` | `n` / `N` | nothing | `n` / `N` |
 | LEAVE | F20 (`copy-mode -q`) | `C(KC_O)` | nothing | `KC_ESC` |
 | BKGD | nothing | `C(KC_X)` then `C(KC_B)` | `C(KC_X)` then `C(KC_B)` | nothing |
-| COPY / PSTE | as today | nothing | nothing | nothing |
+| COPY / PSTE | `KC_ENT` / F20 then C-F22 | nothing | nothing | nothing |
 
 Entering WITHIN (`TM_WITHIN` from any mode) resolves the same way: target
 `copy` → F19 (`copy-mode`); `claude-safe` → `C(KC_O)` and the OLED shows `?`
@@ -189,7 +189,6 @@ natively for a unit test if wanted; the rest of the keymap needs none.
 - No daemon: TREE/WINDOW/PANE work with no prefix (each key is one tmux
   root binding); WITHIN is tmux copy mode with WORD/LINE, select, yank,
   search; OLED shows `~`.
-- With `TMUX_PREFIX_FALLBACK` on, the same flows work through the prefix.
 - Daemon, shell pane: F enters tmux copy mode; keys are the `copy` column.
 - Daemon, Claude pane: F sends `Ctrl+o`; OLED shows `CLAUDE ?` until the
   host observes the viewer, then `TRSC`; U sends `Ctrl+X Ctrl+B`; ↓ scrolls a line, WORD+↓ half a page,

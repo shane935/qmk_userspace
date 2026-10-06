@@ -334,10 +334,8 @@ export default {
         TC_PSTE: {
             label: 'Paste',
             desc: 'Paste the buffer and leave tmux mode',
-            note: 'Sends F20 to leave copy mode, then prefix ] to paste the buffer, then turns ' +
-                'tmux mode off — pasting is taken to be the last thing you wanted from tmux. ' +
-                'paste-buffer is the one action with no row in the key table, so it is the one ' +
-                'that still goes through the prefix.',
+            note: 'Sends F20 to leave copy mode, then Ctrl-F22 to paste the buffer, then turns ' +
+                'tmux mode off — pasting is taken to be the last thing you wanted from tmux.',
         },
         TC_WORD: {
             label: 'Word',
@@ -554,10 +552,11 @@ export default {
                 'or Alt where it needs one, bound in tmux\'s root key table to the command it ' +
                 'runs. No prefix, so there is no half-pressed state to get stuck in, and tmux ' +
                 'acts the instant the key arrives. The table lives in docs/00-protocol.md and ' +
-                'is generated into tmux.conf from the same source, so the two cannot drift. A ' +
-                'terminal that will not pass F13 and up through is the one reason the old ' +
-                'prefix path is still in keymap.c, behind TMUX_PREFIX_FALLBACK in config.h. ' +
-                'Only paste-buffer has no row, so it alone still sends prefix ] either way.',
+                'is generated into tmux.conf from the same source, so the two cannot drift, and ' +
+                'every flag — which directory a new pane opens in, which pane keeps the focus ' +
+                'after a swap — lives there rather than in keymap.c. The keymap does not know ' +
+                'the prefix at all and has no second path to fall back to: a terminal that will ' +
+                'not pass F13 and up through is a terminal this keyboard does not drive.',
         },
         {
             title: 'The thumb modifiers',

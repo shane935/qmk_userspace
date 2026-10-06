@@ -25,8 +25,9 @@ Supersedes `app-mode-spec.md`.
   reports them distinctly, their modified forms) bound in tmux's root key
   table to the command. tmux runs the command the instant the key arrives,
   with or without the daemon, so there is one path per key and nothing to
-  confirm beyond observing the result. The prefix sequence is kept in the
-  firmware only as a fallback for terminals that do not pass F13+ through.
+  confirm beyond observing the result. The firmware does not know the prefix
+  and holds no second path: a terminal that will not pass these keys through
+  is a terminal this keyboard does not drive.
 - **Intents** exist only for actions that need the host to wait on something
   the keyboard cannot see. Currently one: WITHIN_DEEP. The keyboard decides
   program-aware keys itself from CONTEXT (open the transcript with `Ctrl+o`
@@ -93,9 +94,10 @@ and must not be reused.
 
 The keyboard sends the key; tmux's root table runs the command. The daemon's
 `--print-tmux-conf` emits exactly this table; the firmware's `tmux_fkey()`
-sends exactly these keys. Plain F13–F24 first; the modified forms are used
-only after the terminal is verified to report them distinctly (see dotfiles
-spec), otherwise those rows fall back to the prefix sequence.
+sends exactly these keys and knows nothing else. Every command lives here and
+only here, so a flag changes in the generated conf and the firmware does not
+move. The terminal has to report F13–F24 and their Shift, Ctrl and Alt forms
+distinctly (see dotfiles spec); there is no fallback if it does not.
 
 | Key | Command | Used by |
 |---|---|---|
@@ -113,7 +115,7 @@ spec), otherwise those rows fall back to the prefix sequence.
 | F24 | `new-window -c '#{pane_current_path}'` | bound, not sent |
 | S-F13..S-F16 | `resize-pane -{L,D,U,R} 5` | PANE RESIZE + arrow |
 | C-F13..C-F16 | `split-window -{hb,v,vb,h} -c '#{pane_current_path}'` | PANE SPLIT + arrow |
-| M-F13..M-F16 | `swap-pane` in that direction | PANE MOVE + arrow |
+| M-F13..M-F16 | `swap-pane -s '{left-of}'` / `'{down-of}'` / `'{up-of}'` / `'{right-of}'` | PANE MOVE + arrow |
 | S-F17 | `kill-pane` | bound, not sent |
 | S-F18 | `next-layout` | PANE layout |
 | S-F19 | `switch-client -p` | WINDOW session ← |
@@ -126,16 +128,19 @@ spec), otherwise those rows fall back to the prefix sequence.
 | C-F19 | `break-pane` | bound, not sent |
 | C-F20 | `new-window -b -c '#{pane_current_path}'` | bound, not sent |
 | C-F21 | `new-window -a -c '#{pane_current_path}'` | bound, not sent |
+| C-F22 | `paste-buffer` | PSTE |
 
 "Bound, not sent" means the daemon emits the binding but no key on the
 keyboard reaches it today. They are in the table so that giving one a key is a
 firmware-only change rather than another `VERSION` bump: kill stays with the
 tree, and break-pane and the two new-window variants are wanted later.
 
-`swap-window` takes `-d` and `split-window` and `new-window` take
-`-c '#{pane_current_path}'` because that is what the prefix path they replace
-did: without them the client stops following the window it just moved, and new
-panes and windows open in `$HOME` instead of beside the pane they came from.
+The flags are part of the contract, not decoration, because the firmware has no
+other way to ask for them: `swap-window -d` is what makes the client follow the
+window it just moved, `-c '#{pane_current_path}'` is what opens a new pane or
+window beside the one it came from rather than in `$HOME`, and `swap-pane`
+takes the neighbour as `-s` rather than `-t` so focus ends up on the pane that
+moved, which is what lets repeated presses push one pane along a row.
 
 Inside copy mode the keyboard sends the vi keys; the generated conf binds
 the ones WITHIN relies on explicitly in `copy-mode-vi` so they do not depend

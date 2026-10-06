@@ -241,8 +241,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
-#define TMUX_PREFIX C(KC_B)
-
 // Which mode layer sits on top of _TMUX, or TMUX_OFF when tmux mode is off.
 // Layer 0 is _MAC and so can never be a mode, which leaves it free to mean off.
 #define TMUX_OFF 0
@@ -287,13 +285,11 @@ static bool tmux_transcript = false;
 // answer. True between those two presses.
 static bool tmux_kill_pending = false;
 
-// New panes and windows open where the current pane is.
-#define TMUX_CWD " -c '#{pane_current_path}'"
-
 // Every tmux action is one row of the key table in docs/00-protocol.md: a
-// single root-table key, which tmux runs the instant it arrives, with no prefix
-// and no daemon in the path. mods names the row, so S-F19 in the table is
-// tmux_fkey(KC_F19, MOD_LSFT) here.
+// single root-table key, which tmux runs the instant it arrives. The commands
+// themselves -- and so the directory a new pane opens in, and every other flag
+// -- live in the generated tmux.conf, not here. mods names the row, so S-F19 in
+// the table is tmux_fkey(KC_F19, MOD_LSFT) here.
 static void tmux_fkey(uint8_t fkey, uint8_t mods) {
     if (mods) {
         register_mods(mods);
@@ -304,43 +300,12 @@ static void tmux_fkey(uint8_t fkey, uint8_t mods) {
     }
 }
 
-// Every tmux key the keyboard sends is the prefix followed by one key.
-static void tmux_key(uint16_t keycode) {
-    tap_code16(TMUX_PREFIX);
-    tap_code16(keycode);
-}
-
-#ifdef TMUX_PREFIX_FALLBACK
-// Anything without a suitable default binding goes through tmux's command
-// prompt, so none of this depends on the user's tmux.conf.
-static void tmux_cmd(const char *cmd) {
-    tmux_key(KC_COLN);
-    send_string_P(cmd);
-    tap_code(KC_ENT);
-}
-#endif
-
-// Each action site names both its table row and the prefix sequence that reaches
-// the same command on a terminal that will not pass F13+ through. Only one of
-// the two is ever compiled, so there is no runtime branch and no path that
-// depends on the daemon. Three kinds, by what the fallback needs: one key after
-// the prefix, a command down tmux's prompt, or a bare key read by a tmux mode.
-#ifdef TMUX_PREFIX_FALLBACK
-#    define tmux_action(fkey, mods, prefix_key) tmux_key(prefix_key)
-#    define tmux_action_cmd(fkey, mods, cmd) tmux_cmd(cmd)
-#    define tmux_action_tap(fkey, mods, key) tap_code16(key)
-#else
-#    define tmux_action(fkey, mods, prefix_key) tmux_fkey(fkey, mods)
-#    define tmux_action_cmd(fkey, mods, cmd) tmux_fkey(fkey, mods)
-#    define tmux_action_tap(fkey, mods, key) tmux_fkey(fkey, mods)
-#endif
-
 // TREE and COPY put the pane into a real tmux mode rather than just changing
 // what the keyboard sends, so the pane has to be taken back out of it before
 // anything else happens.
 static void tmux_quit_mode(void) {
     if (tmux_mode == _TMUX_TREE || tmux_mode == _TMUX_COPY) {
-        tmux_action_tap(KC_F20, 0, KC_Q);
+        tmux_fkey(KC_F20, 0);
     }
 }
 
@@ -364,23 +329,22 @@ static void tmux_set_mode(uint8_t mode) {
     tmux_mod = TMOD_NONE;
 }
 
-// The four directions differ only in which modifier they carry, so the arrow
-// keys hand over their one table row and their four fallbacks. Shift, Ctrl and
-// Alt on the same row are resize, split and swap, which is the whole of the
-// table's PANE block.
-static void tmux_pane_arrow(uint8_t fkey, uint16_t arrow, const char *resize, const char *split, const char *move) {
+// The four directions differ only in which row they send, and the modifiers
+// only in which mod rides on it: Shift resizes, Ctrl splits, Alt swaps. That is
+// the whole of the table's PANE block.
+static void tmux_pane_arrow(uint8_t fkey) {
     switch (tmux_mod) {
         case TMOD_RESIZE:
-            tmux_action_cmd(fkey, MOD_LSFT, resize);
+            tmux_fkey(fkey, MOD_LSFT);
             break;
         case TMOD_SPLIT:
-            tmux_action_cmd(fkey, MOD_LCTL, split);
+            tmux_fkey(fkey, MOD_LCTL);
             break;
         case TMOD_MOVE:
-            tmux_action_cmd(fkey, MOD_LALT, move);
+            tmux_fkey(fkey, MOD_LALT);
             break;
         default:
-            tmux_action(fkey, 0, arrow);
+            tmux_fkey(fkey, 0);
             break;
     }
 }
@@ -424,11 +388,9 @@ static void tmux_switch_mode(uint8_t mode) {
     tmux_quit_mode();
     tmux_set_mode(mode);
     if (mode == _TMUX_TREE) {
-        // -O activity puts the most recently used first; the preview is on
-        // unless -N is given.
-        tmux_action_cmd(KC_F21, 0, PSTR("choose-tree -Zw -O activity"));
+        tmux_fkey(KC_F21, 0);
     } else if (mode == _TMUX_COPY) {
-        tmux_action(KC_F19, 0, KC_LBRC);
+        tmux_fkey(KC_F19, 0);
     }
 }
 
@@ -527,7 +489,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_set_mode(TMUX_OFF);
             return false;
         case TM_DTCH:
-            tmux_action(KC_F17, MOD_LCTL, KC_D);
+            tmux_fkey(KC_F17, MOD_LCTL);
             tmux_set_mode(TMUX_OFF);
             return false;
         // The way in to Claude. Ctrl-O is a toggle, so the flag toggles with it
@@ -539,60 +501,48 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_switch_mode(_TMUX_APP);
             return false;
 
-        // swap-pane takes the neighbour as -s rather than -t so that focus ends
-        // up on the pane that moved, which is what makes repeated presses push
-        // the same pane along.
         case TP_UP:
-            tmux_pane_arrow(KC_F15, KC_UP, PSTR("resize-pane -U 5"), PSTR("split-window -vb" TMUX_CWD), PSTR("swap-pane -s '{up-of}'"));
+            tmux_pane_arrow(KC_F15);
             return false;
         case TP_DOWN:
-            tmux_pane_arrow(KC_F14, KC_DOWN, PSTR("resize-pane -D 5"), PSTR("split-window -v" TMUX_CWD), PSTR("swap-pane -s '{down-of}'"));
+            tmux_pane_arrow(KC_F14);
             return false;
         case TP_LEFT:
-            tmux_pane_arrow(KC_F13, KC_LEFT, PSTR("resize-pane -L 5"), PSTR("split-window -hb" TMUX_CWD), PSTR("swap-pane -s '{left-of}'"));
+            tmux_pane_arrow(KC_F13);
             return false;
         case TP_RGHT:
-            tmux_pane_arrow(KC_F16, KC_RGHT, PSTR("resize-pane -R 5"), PSTR("split-window -h" TMUX_CWD), PSTR("swap-pane -s '{right-of}'"));
+            tmux_pane_arrow(KC_F16);
             return false;
         case TP_LAST:
-            tmux_action(KC_F17, 0, KC_SCLN);
+            tmux_fkey(KC_F17, 0);
             return false;
         case TP_ZOOM:
-            tmux_action(KC_F18, 0, KC_Z);
+            tmux_fkey(KC_F18, 0);
             return false;
         case TP_LYT:
-            tmux_action(KC_F18, MOD_LSFT, KC_SPC);
+            tmux_fkey(KC_F18, MOD_LSFT);
             return false;
 
         // Up and down are sessions, which MOVE has nothing to say about, so
         // they are dead while it is held.
         case TW_UP:
             if (tmux_mod == TMOD_NONE) {
-                tmux_action(KC_F19, MOD_LSFT, KC_LPRN);
+                tmux_fkey(KC_F19, MOD_LSFT);
             }
             return false;
         case TW_DOWN:
             if (tmux_mod == TMOD_NONE) {
-                tmux_action(KC_F20, MOD_LSFT, KC_RPRN);
+                tmux_fkey(KC_F20, MOD_LSFT);
             }
             return false;
         case TW_LEFT:
-            if (tmux_mod == TMOD_MOVE) {
-                // -d is what makes the client follow the window it moved.
-                tmux_action_cmd(KC_F22, MOD_LSFT, PSTR("swap-window -d -t -1"));
-            } else {
-                tmux_action(KC_F22, 0, KC_P);
-            }
+            tmux_fkey(KC_F22, tmux_mod == TMOD_MOVE ? MOD_LSFT : 0);
             return false;
         case TW_RGHT:
-            if (tmux_mod == TMOD_MOVE) {
-                tmux_action_cmd(KC_F23, MOD_LSFT, PSTR("swap-window -d -t +1"));
-            } else {
-                tmux_action(KC_F23, 0, KC_N);
-            }
+            tmux_fkey(KC_F23, tmux_mod == TMOD_MOVE ? MOD_LSFT : 0);
             return false;
         case TW_LAST:
-            tmux_action(KC_F21, MOD_LSFT, KC_L);
+            tmux_fkey(KC_F21, MOD_LSFT);
             return false;
 
         case TT_SEL:
@@ -657,11 +607,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tap_code(KC_ENT);
             tmux_set_mode(_TMUX_PANE);
             return false;
-        // paste-buffer has no row in the key table, so this one stays on the
-        // prefix whichever way the switch is set.
         case TC_PSTE:
-            tmux_action_tap(KC_F20, 0, KC_Q);
-            tmux_key(KC_RBRC);
+            tmux_fkey(KC_F20, 0);
+            tmux_fkey(KC_F22, MOD_LCTL);
             tmux_set_mode(TMUX_OFF);
             return false;
 

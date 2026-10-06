@@ -29,12 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SPLIT_LAYER_STATE_ENABLE
 #define BOTH_SHIFTS_TURNS_ON_CAPS_WORD
 
-// Uncomment on a terminal that will not pass F13-F24, or their Shift/Ctrl/Alt
-// forms, through to tmux. Every tmux action then goes back to the prefix
-// sequence it used before instead of its root-table key. The table is in
-// docs/00-protocol.md.
-//#define TMUX_PREFIX_FALLBACK
-
 
 #ifdef RGBLIGHT_ENABLE
     #define RGBLIGHT_EFFECT_BREATHING
