@@ -6,9 +6,9 @@
 // default that config.h leaves commented out. Keep it accurate by hand.
 //
 // The tmux keycodes are the bulk of it. Every one of them is a case in
-// process_record_user that sends a prefix key or a command down tmux's prompt,
-// and the array shows only the name, so customKeys below is the only place the
-// page learns what they do.
+// process_record_user that sends one row of the key table in
+// docs/00-protocol.md, and the array shows only the name, so customKeys below
+// is the only place the page learns what they do.
 //
 // A module rather than JSON so it can carry comments and multi-line prose.
 
@@ -149,8 +149,8 @@ export default {
             label: 'Copy',
             desc: "Copy mode — tmux's scrollback",
             target: '_TMUX_COPY',
-            note: 'Sends prefix [ to put the pane into copy mode and switches the keyboard to ' +
-                'Copy mode. Tapping it again sends q to leave copy mode and drops back to Pane. ' +
+            note: 'Sends F19, which tmux runs as copy-mode, and switches the keyboard to Copy ' +
+                'mode. Tapping it again sends F20, copy-mode -q, and drops back to Pane. ' +
                 "From App mode with Claude's transcript viewer open it sends a bare [ first: " +
                 "inside the viewer that writes the whole conversation into the terminal's own " +
                 'scrollback, so the copy mode it then opens holds all of it rather than the one ' +
@@ -160,14 +160,14 @@ export default {
             label: 'Exit',
             desc: 'Leave tmux mode',
             note: 'Turns tmux mode off and gives the keyboard back. If a tree or copy mode is ' +
-                'open it sends q first, so the next thing you type lands in the shell rather ' +
+                'open it sends F20 first, so the next thing you type lands in the shell rather ' +
                 'than in a mode that was left open. It is the only key that gets you out ' +
                 'without touching tmux state, so it is worth memorising its position.',
         },
         TM_DTCH: {
             label: 'Detach',
             desc: 'Detach the client, then leave tmux mode',
-            note: 'Sends prefix d to detach, and turns tmux mode off with it — there is no ' +
+            note: 'Sends Ctrl-F17, detach-client, and turns tmux mode off with it — there is no ' +
                 'longer a session to send keys to. It sits on the pinky home row, away from ' +
                 'the top row it used to share with Zoom and Layout, because detaching by ' +
                 'accident costs you the whole session.',
@@ -189,49 +189,44 @@ export default {
         TP_UP: {
             label: '↑',
             desc: 'Focus the pane above',
-            note: 'prefix ↑ on its own. Resize makes it resize-pane -U 5, Split makes it ' +
-                'split-window -vb, and Move makes it swap-pane -s {up-of} — which takes the ' +
-                'neighbour as -s rather than -t so focus ends up on the pane that moved, ' +
-                'which is what lets repeated presses push the same pane along.',
+            note: 'F15, select-pane -U, on its own. The modifiers send the same key with Shift, ' +
+                'Ctrl or Alt on it: resize-pane -U 5, split-window -vb, and swap-pane -s ' +
+                '{up-of} — which takes the neighbour as -s rather than -t so focus ends up on ' +
+                'the pane that moved, which is what lets repeated presses push the same pane along.',
         },
         TP_DOWN: {
             label: '↓',
             desc: 'Focus the pane below',
-            note: 'prefix ↓ on its own; resize-pane -D 5 with Resize, split-window -v with ' +
+            note: 'F14, select-pane -D; resize-pane -D 5 with Resize, split-window -v with ' +
                 'Split, swap-pane -s {down-of} with Move.',
         },
         TP_LEFT: {
             label: '←',
             desc: 'Focus the pane to the left',
-            note: 'prefix ← on its own; resize-pane -L 5 with Resize, split-window -hb with ' +
+            note: 'F13, select-pane -L; resize-pane -L 5 with Resize, split-window -hb with ' +
                 'Split, swap-pane -s {left-of} with Move.',
         },
         TP_RGHT: {
             label: '→',
             desc: 'Focus the pane to the right',
-            note: 'prefix → on its own; resize-pane -R 5 with Resize, split-window -h with ' +
+            note: 'F16, select-pane -R; resize-pane -R 5 with Resize, split-window -h with ' +
                 'Split, swap-pane -s {right-of} with Move.',
         },
         TP_LAST: {
             label: 'Last',
             desc: 'Back to the pane you were in before',
-            note: 'prefix ; — tmux\'s last-pane.',
+            note: 'F17 — select-pane -l.',
         },
         TP_ZOOM: {
             label: 'Zoom',
             desc: 'Zoom this pane in or out',
-            note: 'prefix z. Zooming fills the window with this pane; tapping it again puts ' +
-                'the others back.',
+            note: 'F18, resize-pane -Z. Zooming fills the window with this pane; tapping it ' +
+                'again puts the others back.',
         },
         TP_LYT: {
             label: 'Layout',
             desc: 'Cycle the window layout',
-            note: "prefix Space, which steps through tmux's preset layouts.",
-        },
-        TP_BRK: {
-            label: 'Break',
-            desc: 'Break this pane out into its own window',
-            note: 'prefix ! — the pane leaves this window and becomes a window of its own.',
+            note: "Shift-F18, next-layout, which steps through tmux's preset layouts.",
         },
         TP_RSZE: {
             hold: { label: 'Resize', desc: 'Held: the arrows resize the pane' },
@@ -256,39 +251,30 @@ export default {
         TW_UP: {
             label: '↑',
             desc: 'Previous session',
-            note: 'prefix ( . Up and down move between sessions here; left and right move ' +
-                'between windows. Does nothing while New or Move is held — those two only ' +
-                'apply to windows.',
+            note: 'Shift-F19, switch-client -p. Up and down move between sessions here; left ' +
+                'and right move between windows. Does nothing while Move is held — Move only ' +
+                'applies to windows.',
         },
         TW_DOWN: {
             label: '↓',
             desc: 'Next session',
-            note: 'prefix ) . Does nothing while New or Move is held.',
+            note: 'Shift-F20, switch-client -n. Does nothing while Move is held.',
         },
         TW_LEFT: {
             label: '←',
             desc: 'Previous window',
-            note: 'prefix p on its own. With New held it is new-window -b, inserting a window ' +
-                "before this one in the current pane's directory; with Move held it is " +
-                'swap-window -d -t -1, where -d is what makes the client follow the window it ' +
-                'moved.',
+            note: 'F22, select-window -p. With Move held it is Shift-F22, swap-window -d -t -1, ' +
+                'where -d is what makes the client follow the window it moved.',
         },
         TW_RGHT: {
             label: '→',
             desc: 'Next window',
-            note: 'prefix n on its own. With New held it is new-window -a, inserting a window ' +
-                'after this one; with Move held it is swap-window -d -t +1.',
+            note: 'F23, select-window -n. With Move held it is Shift-F23, swap-window -d -t +1.',
         },
         TW_LAST: {
             label: 'Last',
             desc: 'Back to the window you were in before',
-            note: "prefix l — tmux's last-window.",
-        },
-        TW_NEW: {
-            hold: { label: 'New', desc: 'Held: left and right make a window' },
-            note: 'Held. Only left and right do anything while it is down: up and down are ' +
-                'sessions, and opening a new session still needs prompt handling that is not ' +
-                'written yet.',
+            note: 'Shift-F21 — select-window -l.',
         },
         TW_MOVE: {
             hold: { label: 'Move', desc: 'Held: left and right move this window' },
@@ -348,8 +334,10 @@ export default {
         TC_PSTE: {
             label: 'Paste',
             desc: 'Paste the buffer and leave tmux mode',
-            note: 'Sends q to leave copy mode, then prefix ] to paste the buffer, then turns ' +
-                'tmux mode off — pasting is taken to be the last thing you wanted from tmux.',
+            note: 'Sends F20 to leave copy mode, then prefix ] to paste the buffer, then turns ' +
+                'tmux mode off — pasting is taken to be the last thing you wanted from tmux. ' +
+                'paste-buffer is the one action with no row in the key table, so it is the one ' +
+                'that still goes through the prefix.',
         },
         TC_WORD: {
             label: 'Word',
@@ -468,14 +456,6 @@ export default {
             TP_LEFT: { sub: 'swap ←', desc: "swap-pane -s '{left-of}' — trade places with the pane to the left" },
             TP_RGHT: { sub: 'swap →', desc: "swap-pane -s '{right-of}' — trade places with the pane to the right" },
         },
-        TW_NEW: {
-            TW_LEFT: { sub: 'new -b', desc: 'new-window -b — a new window before this one' },
-            TW_RGHT: { sub: 'new -a', desc: 'new-window -a — a new window after this one' },
-            // Up and down are sessions, and opening a session still needs prompt
-            // handling that is not written yet, so they are simply dead here.
-            TW_UP: null,
-            TW_DOWN: null,
-        },
         TW_MOVE: {
             TW_LEFT: { sub: 'swap -t -1', desc: 'swap-window -d -t -1 — move this window one to the left' },
             TW_RGHT: { sub: 'swap -t +1', desc: 'swap-window -d -t +1 — move this window one to the right' },
@@ -549,14 +529,14 @@ export default {
             title: 'The OLED',
             body: 'The master half prints the label OS, then MAC or LINUX, then the tmux mode ' +
                 'and thumb modifier if tmux mode is on — TREE, WINDOW, PANE or COPY, or CLAUDE, ' +
-                'TRSC or HUNK for App mode, followed by RESIZE, SPLIT, MOVE, NEW, WORD, LINE, ' +
+                'TRSC or HUNK for App mode, followed by RESIZE, SPLIT, MOVE, WORD, LINE, ' +
                 'HALF or FULL — then CAPS while Caps Word is ' +
                 'active. Blank lines mean neither is on. The tmux layers are toggled rather ' +
                 'than held, so this line is the only way to tell which mode you are in.',
         },
         {
             title: 'App mode drives the program, not tmux',
-            body: 'Every other mode sends the prefix; App mode sends keys straight to whatever is ' +
+            body: 'Every other mode sends tmux a function key; App mode sends keys straight to whatever is ' +
                 'running in the focused pane. What they mean turns on a state the keymap cannot ' +
                 'show, because neither program can be asked: which of Claude, Claude with its ' +
                 'transcript viewer open, and hunk you are driving. The App key flips between the ' +
@@ -569,11 +549,15 @@ export default {
                 'would interrupt the running turn.',
         },
         {
-            title: 'Every tmux key is prefix plus one key',
-            body: 'The prefix is Ctrl-B, hard-coded in keymap.c, and it is the same on Mac and ' +
-                'Linux — which is why the tmux layers are shared rather than duplicated per ' +
-                'OS. Anything without a suitable default binding goes through tmux\'s command ' +
-                'prompt instead, so none of it depends on your tmux.conf.',
+            title: 'Every tmux key is one key',
+            body: 'Each tmux action is a single function key from F13 to F24, with Shift, Ctrl ' +
+                'or Alt where it needs one, bound in tmux\'s root key table to the command it ' +
+                'runs. No prefix, so there is no half-pressed state to get stuck in, and tmux ' +
+                'acts the instant the key arrives. The table lives in docs/00-protocol.md and ' +
+                'is generated into tmux.conf from the same source, so the two cannot drift. A ' +
+                'terminal that will not pass F13 and up through is the one reason the old ' +
+                'prefix path is still in keymap.c, behind TMUX_PREFIX_FALLBACK in config.h. ' +
+                'Only paste-buffer has no row, so it alone still sends prefix ] either way.',
         },
         {
             title: 'The thumb modifiers',
@@ -603,8 +587,8 @@ export default {
                 'modifiers, the Nav layer bottom row (Mac sends Command+Z/X/C/V/F, Linux sends ' +
                 'the dedicated Undo/Cut/Copy/Paste/Find keys), and a Ctrl/Super swap on the ' +
                 'Numbers home row. Use the "differs by OS" toggle to see exactly which keys. ' +
-                'The six tmux layers are the exception — they are shared, because the tmux ' +
-                'prefix is Ctrl on both.',
+                'The six tmux layers are the exception — they are shared, because a function ' +
+                'key means the same thing to tmux on both.',
         },
     ],
 };
