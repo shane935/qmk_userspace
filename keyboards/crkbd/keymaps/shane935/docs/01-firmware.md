@@ -28,7 +28,7 @@ S `TM_WIN`, D `TM_PANE`, F `TM_WITHIN`, G unused, T `TM_EXIT`.
 ## State
 
 Desired state, owned by the keyboard, as today: `tmux_mode`, `tmux_mod`
-(RESIZE/SPLIT/MOVE/NEW held; WORD/LINE held in WITHIN), base layer.
+(RESIZE/SPLIT/MOVE held; WORD/LINE held in WITHIN), base layer.
 
 Context, owned by the host, received over Raw HID:
 
@@ -83,8 +83,12 @@ Intent status for WITHIN_DEEP: `pending` shows `?`; `done` clears it;
 
 ## Layer contents
 
-**TREE, WINDOW, PANE**: as they are. PANE's O is unused (no transcript key;
-WITHIN on a Claude pane opens the viewer).
+**TREE, WINDOW, PANE**: as they are, less the three actions the key table has
+no key for. PANE's O is unused (no transcript key; WITHIN on a Claude pane
+opens the viewer) and so is its M (`TP_BRK`, break-pane). WINDOW loses the
+`TW_NEW` thumb and the `new-window -b`/`-a` it modified, which leaves `MOVE`
+the only modifier WINDOW has and retires `TMOD_NEW`. Session ←/→ and last
+window stay, on `S-F19`/`S-F20`/`S-F21`.
 
 **WITHIN**, right hand:
 
@@ -109,9 +113,9 @@ Left thumbs: outer `TC_WORD`, middle `TC_LINE`, both held; inner unused.
 Right thumbs unused. Select/yank positions match the existing COPY layer;
 if they differ in the file, keep the file's.
 
-Optional, decide with Shane: `TC_DEEP` on G while in WITHIN, intent
-WITHIN_DEEP (copy mode containing Claude's whole conversation). Off by
-default. Inert outside Claude.
+`TC_DEEP` on G while in WITHIN, intent WITHIN_DEEP (copy mode containing
+Claude's whole conversation). Decided in and live: no compile switch. Inert
+outside Claude, and with no daemon to actuate the intent it does nothing.
 
 ## WITHIN resolution
 

@@ -52,7 +52,7 @@ older message; the sender resends its current state. No request ids, no
 other acks.
 
 ```
-VERSION = 1
+VERSION = 2
 ```
 
 ## Keyboard -> host: STATE
@@ -71,7 +71,7 @@ reply to every CONTEXT whose `ack` is stale.
 | 6 | intent arg | per intent |
 | 7 | intent nonce | uint8, increments per intent; host echoes it |
 | 8 | mode | `0` tmux layer off, `1` TMUX base, `2` TREE, `3` WINDOW, `4` PANE, `5` WITHIN |
-| 9 | held modifier | `0` none, `1` RESIZE, `2` SPLIT, `3` MOVE, `4` NEW, `5` WORD, `6` LINE |
+| 9 | held modifier | `0` none, `1` RESIZE, `2` SPLIT, `3` MOVE, `4` reserved (was NEW), `5` WORD, `6` LINE |
 | 10 | base layer | `0` unknown, `1` linux, `2` mac; bit 7 set = manual override active |
 | 11 | flags | bit0 = keyboard currently considers host alive |
 | 12 | event | what the keyboard just did, so the host can schedule its observation: `0` none, `1` sent `Ctrl+o` to a Claude pane, `2` sent a tmux root key, `3` sent a copy-mode key |
@@ -110,16 +110,32 @@ spec), otherwise those rows fall back to the prefix sequence.
 | F21 | `choose-tree -Zw -O activity` | TREE entry |
 | F22 | `select-window -p` | WINDOW ← |
 | F23 | `select-window -n` | WINDOW → |
-| F24 | `new-window` | WINDOW new |
+| F24 | `new-window -c '#{pane_current_path}'` | bound, not sent |
 | S-F13..S-F16 | `resize-pane -{L,D,U,R} 5` | PANE RESIZE + arrow |
-| C-F13..C-F16 | `split-window -{hb,v,vb,h}` | PANE SPLIT + arrow |
+| C-F13..C-F16 | `split-window -{hb,v,vb,h} -c '#{pane_current_path}'` | PANE SPLIT + arrow |
 | M-F13..M-F16 | `swap-pane` in that direction | PANE MOVE + arrow |
-| S-F17 | `kill-pane` | PANE kill |
+| S-F17 | `kill-pane` | bound, not sent |
 | S-F18 | `next-layout` | PANE layout |
-| S-F22 / S-F23 | `swap-window -t -1` / `-t +1` | WINDOW MOVE |
-| S-F24 | `kill-window` | WINDOW kill |
+| S-F19 | `switch-client -p` | WINDOW session ← |
+| S-F20 | `switch-client -n` | WINDOW session → |
+| S-F21 | `select-window -l` | WINDOW last |
+| S-F22 / S-F23 | `swap-window -d -t -1` / `-d -t +1` | WINDOW MOVE |
+| S-F24 | `kill-window` | bound, not sent |
 | C-F17 | `detach-client` | DETACH |
-| C-F18 | `switch-client -l` | last session |
+| C-F18 | `switch-client -l` | bound, not sent |
+| C-F19 | `break-pane` | bound, not sent |
+| C-F20 | `new-window -b -c '#{pane_current_path}'` | bound, not sent |
+| C-F21 | `new-window -a -c '#{pane_current_path}'` | bound, not sent |
+
+"Bound, not sent" means the daemon emits the binding but no key on the
+keyboard reaches it today. They are in the table so that giving one a key is a
+firmware-only change rather than another `VERSION` bump: kill stays with the
+tree, and break-pane and the two new-window variants are wanted later.
+
+`swap-window` takes `-d` and `split-window` and `new-window` take
+`-c '#{pane_current_path}'` because that is what the prefix path they replace
+did: without them the client stops following the window it just moved, and new
+panes and windows open in `$HOME` instead of beside the pane they came from.
 
 Inside copy mode the keyboard sends the vi keys; the generated conf binds
 the ones WITHIN relies on explicitly in `copy-mode-vi` so they do not depend
