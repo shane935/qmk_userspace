@@ -114,7 +114,7 @@ distinctly (see dotfiles spec); there is no fallback if it does not.
 | F17 | `select-pane -l` | PANE last |
 | F18 | `resize-pane -Z` | PANE zoom |
 | F19 | `copy-mode` | WITHIN entry on a non-Claude, non-hunk pane |
-| F20 | `copy-mode -q` | leave any mode (PANE key, LEAVE in copy/tree) |
+| F20 | `copy-mode -q` | leave any mode; also bound in the mode tables, see below |
 | F21 | `choose-tree -Zw -O activity` | TREE entry |
 | F22 | `select-window -p` | WINDOW ← |
 | F23 | `select-window -n` | WINDOW → |
@@ -157,6 +157,16 @@ swallow the second half and treat the next key as a prefix command. Routing it
 through `send-keys` writes straight into the pane, past tmux's key tables, so
 it works whatever the prefix is bound to. That is the only reason the firmware
 never emits `C-b` for anything.
+
+F20 is bound in `copy-mode-vi` and `copy-mode` as well as in the root table,
+to the same `copy-mode -q`. It is the only key the keyboard sends while a pane is
+already in a mode — every other row either moves the pane into a mode or is sent
+once it is out of one — and whether a root binding is reachable from inside a
+mode is a tmux detail not worth depending on. Binding it in all three costs a
+line and makes "leave whatever mode this pane is in" true unconditionally,
+including from `choose-tree`, which uses the `copy-mode` table. The same applies
+to `mode-keys`: binding it in both mode tables means it does not matter whether
+the user's is vi or emacs.
 
 Inside copy mode the keyboard sends copy-mode-vi's own keys, and the generated
 conf binds the ones WITHIN uses explicitly so they do not depend on `mode-keys`:
