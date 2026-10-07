@@ -5,3 +5,4 @@ RAW_ENABLE = yes
 # The wire format, kept out of keymap.c so it can be built and tested without
 # QMK. test/run.sh does exactly that.
 SRC += kb_protocol.c
+SRC += tmux_context.c

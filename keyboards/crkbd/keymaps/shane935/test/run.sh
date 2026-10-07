@@ -1,9 +1,11 @@
 #!/bin/sh
-# Builds and runs the kb_protocol unit test. kb_protocol.c includes no QMK
-# headers, which is the whole reason it is a separate file, so this needs a C
-# compiler and nothing else -- no QMK checkout, no toolchain, no keyboard.
+# Builds and runs the unit tests for the pure parts of this keymap: kb_protocol.c
+# (the wire format) and tmux_context.c (what WITHIN mode sends). Neither calls
+# into QMK -- tmux_context.c includes QMK's keycode headers, which are enums and
+# macros only -- so this needs a C compiler and nothing else: no QMK build, no
+# toolchain, no keyboard.
 #
-# With a native compiler it just builds and runs. Without one, set WASI_SDK to
+# With a native compiler it just builds and runs. Without one, point WASI_SDK at
 # an unpacked wasi-sdk and it builds for wasm32-wasip1 and runs under node
 # instead, which is how it is tested in the agent sandbox:
 #
@@ -12,23 +14,34 @@
 #   WASI_SDK=/tmp/wasi-sdk-25.0-x86_64-linux test/run.sh
 set -e
 here=$(dirname "$0")
-out="${TMPDIR:-/tmp}/kb_protocol_test"
+root="$here/../../../../.."
+tmp="${TMPDIR:-/tmp}"
 warn="-std=c11 -Wall -Wextra -Werror"
-src="$here/kb_protocol_test.c $here/../kb_protocol.c"
+# QMK's keycode headers, for the keycodes tmux_context.c resolves to.
+inc="-I$root/quantum -I$root/quantum/keymap_extras -I$root/quantum/sequencer"
+srcs="$here/../kb_protocol.c $here/../tmux_context.c"
 
 if [ -n "$WASI_SDK" ]; then
-    # shellcheck disable=SC2086
-    "$WASI_SDK/bin/clang" --target=wasm32-wasip1 $warn -o "$out.wasm" $src
-    cat > "$out.mjs" <<'JS'
+    cat > "$tmp/run.mjs" <<'JS'
 import { WASI } from 'node:wasi';
 import { readFile } from 'node:fs/promises';
-const wasi = new WASI({ version: 'preview1', args: ['kb_protocol_test'], env: {} });
+const wasi = new WASI({ version: 'preview1', args: ['test'], env: {} });
 const mod = await WebAssembly.compile(await readFile(process.argv[2]));
 process.exitCode = wasi.start(await WebAssembly.instantiate(mod, wasi.getImportObject()));
 JS
-    exec node --no-warnings "$out.mjs" "$out.wasm"
 fi
 
-# shellcheck disable=SC2086
-"${CC:-cc}" $warn -o "$out" $src
-exec "$out"
+status=0
+for t in "$here"/*_test.c; do
+    name=$(basename "$t" .c)
+    if [ -n "$WASI_SDK" ]; then
+        # shellcheck disable=SC2086
+        "$WASI_SDK/bin/clang" --target=wasm32-wasip1 $warn $inc -o "$tmp/$name.wasm" "$t" $srcs
+        node --no-warnings "$tmp/run.mjs" "$tmp/$name.wasm" || status=1
+    else
+        # shellcheck disable=SC2086
+        "${CC:-cc}" $warn $inc -o "$tmp/$name" "$t" $srcs
+        "$tmp/$name" || status=1
+    fi
+done
+exit $status
