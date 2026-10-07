@@ -74,6 +74,9 @@ WITHIN sends, `kb_rules.c` how reports change desired state, `kb_protocol.c` the
 wire format, and each has a test beside it. What is left in `keymap.c` is wiring,
 and only a flashed board can check that.
 
+`bugs.md` is what is known to be wrong and deliberately not fixed, with what
+each fix would take.
+
 The keyboard owns desired state — which tmux mode, which modifier, which base
 layer — and the host owns observable context: the program in the focused pane,
 whether it is in a tmux mode, and the OS, which is the one thing the host is
