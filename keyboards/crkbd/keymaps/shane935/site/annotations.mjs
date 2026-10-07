@@ -151,11 +151,10 @@ export default {
                 'conversation: Claude writes it into the terminal scrollback and the host opens ' +
                 'copy mode over all of it, so you can search and yank across the lot rather than ' +
                 'the one frame Claude is drawing. So this key winds in while there is further in ' +
-                'to go and unwinds one level when there is not: pressed over copy mode it closes ' +
-                'copy mode and stays in Within, which over a Claude viewer lands you back in the ' +
-                'viewer with the next press offering the conversation again. On a pane with ' +
-                'nothing underneath there is nothing to unwind to, so it does nothing at all and ' +
-                'Leave is the way out.',
+                'to go and comes out of copy mode when there is not. Over a Claude viewer that ' +
+                'lands you back in the viewer, with the next press offering the conversation ' +
+                'again — in and back out. Anywhere else there is nothing underneath copy mode, so ' +
+                'it drops to Pane rather than leaving Within with nothing open.',
         },
         TM_EXIT: {
             label: 'Exit',

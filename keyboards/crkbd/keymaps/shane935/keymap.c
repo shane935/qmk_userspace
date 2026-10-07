@@ -570,12 +570,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     // contradiction rule catches, so the next report moves to
                     // PANE. That is right rather than unfortunate: WITHIN
                     // without copy mode sends vi letters to the program.
-                    // A Claude pane has the viewer underneath, so closing copy
-                    // mode lands back in it. Anything else has nothing to unwind
-                    // to, so this does nothing and P is the way out.
+                    // Copy mode is as far in as it goes, so F comes out of it.
+                    // A Claude pane has the viewer underneath, so that lands back
+                    // in the viewer and WITHIN still means something. Anything
+                    // else has nothing underneath, and WITHIN with nothing open
+                    // sends vi letters to the program, so the mode comes out too.
                     case WT_COPY:
                         if (host_alive() && ctx.program == KB_PROGRAM_CLAUDE) {
                             tmux_fkey(KC_F20, 0);
+                        } else {
+                            tmux_switch_mode(_TMUX_PANE);
                         }
                         return false;
                     // Nothing was opened, so there is nothing to unwind.
