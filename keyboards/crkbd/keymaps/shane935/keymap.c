@@ -290,9 +290,6 @@ static void kb_apply_os(void) {
         set_single_persistent_default_layer(layer);
     }
 }
-#else
-#    define send_state(intent, arg) ((void)0)
-#endif
 
 #ifdef RAW_ENABLE
 // The two translations between the keymap's own enums and the protocol's values.
