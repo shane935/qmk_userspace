@@ -71,8 +71,8 @@ be made in all three.
 
 There is no separate firmware spec: the code is it. `tmux_context.c` holds what
 WITHIN sends, `kb_rules.c` how reports change desired state, `kb_protocol.c` the
-wire format, and each has a test beside it. `test/hardware.md` lists what only a
-flashed board can check.
+wire format, and each has a test beside it. What is left in `keymap.c` is wiring,
+and only a flashed board can check that.
 
 The keyboard owns desired state — which tmux mode, which modifier, which base
 layer — and the host owns observable context: the program in the focused pane,

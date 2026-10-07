@@ -16,8 +16,8 @@ made in all three.
 - An intent is **one-shot**: the host actuates, observes, retries a bounded
   number of times, reports `done` or `failed`, and stops. It never enforces.
 - A report that contradicts desired state while no intent is pending means the
-  world moved (a pane closed, a program exited); the keyboard adopts it and
-  marks the OLED briefly. This is a safety net, not a normal path.
+  world moved (a pane closed, a program exited); the keyboard adopts it. This is
+  a safety net, not a normal path.
 - **tmux actions are keys, not intents.** Every tmux action the keyboard
   performs is a single prefix-free key (F13–F24 and, where the terminal
   reports them distinctly, their modified forms) bound in tmux's root key
@@ -79,8 +79,8 @@ reply to every CONTEXT whose `ack` is stale.
 | 9 | held modifier | `0` none, `1` RESIZE, `2` SPLIT, `3` MOVE, `4` reserved, `5` WORD, `6` LINE |
 | 10 | base layer | `0` unknown, `1` linux, `2` mac; bit 7 set = manual override active |
 | 11 | flags | bit0 = keyboard currently considers host alive |
-| 12 | event | what the keyboard just did, so the host can schedule its observation: `0` none, `1` sent `Ctrl+o` to a Claude pane, `2` sent a tmux root key, `3` sent a copy-mode key |
-| 13 | event arg | for event `2`: the tmux key table row (`1` = F13 … `12` = F24, +`0x10` Shift, +`0x20` Ctrl, +`0x40` Alt) |
+| 12 | event | what the keyboard just did, so the host can schedule its observation: `0` none, `1` sent a tmux root key |
+| 13 | event arg | for event `1`: the tmux key table row (`1` = F13 … `12` = F24, +`0x10` Shift, +`0x20` Ctrl, +`0x40` Alt) |
 | 14..31 | zero | |
 
 ### Intent ids
@@ -158,12 +158,12 @@ through `send-keys` writes straight into the pane, past tmux's key tables, so
 it works whatever the prefix is bound to. That is the only reason the firmware
 never emits `C-b` for anything.
 
-Inside copy mode the keyboard sends the vi keys; the generated conf binds
-the ones WITHIN relies on explicitly in `copy-mode-vi` so they do not depend
-on `mode-keys`: `{`/`}` → `previous-prompt`/`next-prompt` (which need the
-shell to emit OSC 133; without it tmux falls back to paragraph motion),
-`C-u`/`C-d` → half page, `b`/`Space` → page, `/` `n` `N` → search,
-`Escape` → `cancel`.
+Inside copy mode the keyboard sends copy-mode-vi's own keys, and the generated
+conf binds the ones WITHIN uses explicitly so they do not depend on `mode-keys`:
+the four arrows, `PageUp`/`PageDown`, `b`/`w` for a word, `0`/`$` for a line,
+`/` `n` `N` for search, `V` to select whole lines, and `Enter` for
+`copy-pipe-and-cancel`. That is the whole set; leaving copy mode and pasting are
+root-table keys, not copy-mode-vi ones.
 
 ## Host -> keyboard: CONTEXT
 

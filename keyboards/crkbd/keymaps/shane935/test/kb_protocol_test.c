@@ -4,7 +4,7 @@
 // This is the one part of the keymap worth a test of its own: an offset or a
 // bit that is wrong by one is invisible on the keyboard and shows up as the
 // daemon quietly misreading every report. Everything else in keymap.c is
-// wiring, and test/hardware.md lists what to check on a real board.
+// wiring, and only a flashed board can check it.
 
 #include "../kb_protocol.h"
 
@@ -28,9 +28,9 @@ static void check_eq(unsigned got, unsigned want, const char *what) {
 }
 
 // A STATE carrying real protocol values, for the tests that are about meaning.
-// Deliberately not used for the offset test: the real values collide -- KB_STATE,
-// KB_OS_MAC and KB_EVENT_TMUX_KEY are all 2, and KB_MODE_WITHIN is 5 like the
-// WORD modifier -- so a swapped pair of offsets would read as correct.
+// Deliberately not used for the offset test: the real values collide -- KB_STATE
+// and KB_OS_MAC are both 2, KB_MODE_WITHIN is 5 like the WORD modifier, and
+// KB_EVENT_TMUX_KEY is 1 -- so a swapped pair of offsets would read as correct.
 static kb_state_t sample_state(void) {
     kb_state_t s = {
         .type        = KB_STATE,
