@@ -1,5 +1,6 @@
-// Unit tests for tmux_context.c: the target resolution and the key table from
-// docs/01-firmware.md. Run with test/run.sh.
+// Unit tests for tmux_context.c: the target resolution and the key table. Run
+// with test/run.sh. The table below is the spec for what WITHIN sends -- there
+// is no prose copy of it to drift from.
 //
 // The table is the whole design of WITHIN mode, and most of its cells are a
 // judgement about what is safe to send to a program that cannot be asked what
@@ -79,7 +80,7 @@ static void test_target(void) {
 
 // ---------------------------------------------------------------- key table
 
-// docs/01-firmware.md, transcribed. `then` of KC_NO means a single keycode and
+// Every cell of it. `then` of KC_NO means a single keycode and
 // an intent of 0 means it is keys rather than an intent; a row of all three zero
 // is a cell that deliberately sends nothing.
 static const struct {
@@ -191,9 +192,10 @@ static void test_table(void) {
 
 // ---------------------------------------------------------------- invariants
 
-// docs/01-firmware.md names four keystrokes that must never reach any program,
-// "by construction of the table". Construction is exactly what a spot check
-// cannot confirm, so this walks every cell there is.
+// Four keystrokes must never reach any program: q quits hunk, Escape interrupts
+// a Claude turn, Ctrl-D exits Claude Code at a prompt, and Ctrl-B is tmux's
+// prefix. That holds by construction of the table, and construction is exactly
+// what a spot check cannot confirm, so this walks every cell there is.
 static void test_never_sent(void) {
     for (int t = 0; t <= WT_HUNK; t++) {
         for (int k = 0; k < WK__COUNT; k++) {

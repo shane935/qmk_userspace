@@ -443,10 +443,8 @@ static within_mod_t within_mod_now(void) {
     return tmux_mod == TMOD_WORD ? WM_WORD : tmux_mod == TMOD_LINE ? WM_LINE : WM_NONE;
 }
 
-// The mode the intent was sent from, so a `failed` status can put it back; the
-// status already acted on, so a host repeating it does not re-trigger; and when
-// the mark it left on the OLED goes out.
-static uint8_t  intent_prev_mode;
+// The status already acted on, so a host repeating it does not re-trigger, and
+// when the mark it left on the OLED goes out.
 static uint8_t  intent_acked;
 static uint32_t intent_mark_ms;
 static bool     intent_failed;
@@ -459,9 +457,8 @@ static void within_send(within_key_t key) {
     within_action_t a = within_resolve(within_now(), key, within_mod_now());
 
     if (a.intent) {
-        intent_prev_mode = tmux_mode;
-        intent_failed    = false;
-        intent_acked     = KB_INTENT_NONE;
+        intent_failed = false;
+        intent_acked  = KB_INTENT_NONE;
         send_state(a.intent, 0);
         return;
     }
@@ -723,15 +720,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     // answer every 500 ms until the next intent, so acting on it each time would
     // hold the OLED mark on for as long as the daemon kept talking.
     if (kb_intent_settled(&ctx, ctx_nonce) && ctx.intent_status != intent_acked) {
+        // Neither intent moves the mode: both are entered from WITHIN and both
+        // succeed by changing which target resolves, so a failure needs nothing
+        // undone and the mark is the whole of the keyboard's response.
         intent_acked   = ctx.intent_status;
         intent_failed  = ctx.intent_status == KB_INTENT_FAILED;
         intent_mark_ms = timer_read32();
-        // WITHIN_DEEP does not move the mode -- it is already WITHIN, and a
-        // success only changes which target resolves -- so there is nothing to
-        // put back. This is for an intent that does move it.
-        if (intent_failed && tmux_mode != intent_prev_mode) {
-            tmux_set_mode(intent_prev_mode);
-        }
     }
 
     // A CONTEXT whose ack is not the current seq answered an older STATE, so

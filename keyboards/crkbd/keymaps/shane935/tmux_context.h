@@ -3,8 +3,8 @@
 // Pure functions of the context and the held thumb: no QMK state, no layer
 // stack, nothing remembered. The keymap calls these on every keypress rather
 // than caching the answer, because the pane under the cursor can change without
-// the keyboard being told. Built natively by test/run.sh, which is where the
-// table in docs/01-firmware.md is actually checked.
+// the keyboard being told. test/tmux_context_test.c builds this natively and
+// holds the table it resolves, cell by cell.
 
 #pragma once
 

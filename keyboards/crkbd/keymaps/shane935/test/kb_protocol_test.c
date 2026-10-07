@@ -4,7 +4,7 @@
 // This is the one part of the keymap worth a test of its own: an offset or a
 // bit that is wrong by one is invisible on the keyboard and shows up as the
 // daemon quietly misreading every report. Everything else in keymap.c is
-// wiring, and the acceptance list in docs/01-firmware.md covers it.
+// wiring, and test/hardware.md lists what to check on a real board.
 
 #include "../kb_protocol.h"
 

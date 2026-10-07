@@ -67,7 +67,12 @@ is the translation unit that includes it.
 
 `docs/00-protocol.md` is a contract shared with the daemon and dotfiles repos
 and is copied unchanged into each. Any change to it bumps `VERSION` and has to
-be made in all three. `docs/01-firmware.md` is this repo's side of it.
+be made in all three.
+
+There is no separate firmware spec: the code is it. `tmux_context.c` holds what
+WITHIN sends, `kb_rules.c` how reports change desired state, `kb_protocol.c` the
+wire format, and each has a test beside it. `test/hardware.md` lists what only a
+flashed board can check.
 
 The keyboard owns desired state — which tmux mode, which modifier, which base
 layer — and the host owns observable context: the program in the focused pane,
