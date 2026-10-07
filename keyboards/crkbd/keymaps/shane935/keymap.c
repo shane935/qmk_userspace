@@ -560,10 +560,23 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         // stops it closing and reopening copy mode and losing the cursor.
         case TM_WITHIN:
             if (tmux_mode == _TMUX_WITHIN) {
-                within_target_t deeper = within_now();
-                if (deeper == WT_COPY || deeper == WT_HUNK) {
-                    tmux_switch_mode(_TMUX_PANE);
-                    return false;
+                switch (within_now()) {
+                    // Unwind one level and stay in WITHIN. Over a Claude viewer
+                    // that lands back in the viewer -- it is still open
+                    // underneath -- and the next F asks for the conversation
+                    // again. On a pane with nothing underneath, closing copy
+                    // mode leaves WITHIN with nothing open, which is what the
+                    // contradiction rule catches, so the next report moves to
+                    // PANE. That is right rather than unfortunate: WITHIN
+                    // without copy mode sends vi letters to the program.
+                    case WT_COPY:
+                        tmux_fkey(KC_F20, 0);
+                        return false;
+                    // Nothing was opened, so there is nothing to unwind.
+                    case WT_HUNK:
+                        return false;
+                    default:
+                        break;
                 }
             }
             tmux_switch_mode(_TMUX_WITHIN);

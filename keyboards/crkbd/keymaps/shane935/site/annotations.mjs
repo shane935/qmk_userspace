@@ -150,10 +150,12 @@ export default {
                 'Pressing it again once the viewer is open is a second ask, for the whole ' +
                 'conversation: Claude writes it into the terminal scrollback and the host opens ' +
                 'copy mode over all of it, so you can search and yank across the lot rather than ' +
-                'the one frame Claude is drawing. So this key goes deeper while there is deeper ' +
-                'to go, and leaves when there is not — in copy mode or hunk there is nothing ' +
-                'further in, so it drops back to Pane. Leave closes what the target has open ' +
-                'without leaving Within; this leaves.',
+                'the one frame Claude is drawing. So this key winds in while there is further in ' +
+                'to go and unwinds one level when there is not: pressed over copy mode it closes ' +
+                'copy mode and stays in Within, which over a Claude viewer lands you back in the ' +
+                'viewer with the next press offering the conversation again. On a pane with ' +
+                'nothing underneath, Within with no copy mode open is the state the keyboard ' +
+                'treats as the world having moved, so the next report drops you to Pane.',
         },
         TM_EXIT: {
             label: 'Exit',
@@ -348,8 +350,9 @@ export default {
         },
         TC_BKGD: {
             label: 'Bkgd',
-            desc: 'Background the running tool or agent',
-            note: "Claude's Ctrl-X Ctrl-B, on both Claude targets and nowhere else. It goes out " +
+            desc: 'Send the running agent to the background',
+            note: "Claude's Ctrl-X Ctrl-B, which sends the running agent to the background. On " +
+                'both Claude targets and nowhere else. It goes out ' +
                 "as a tmux key rather than as the chord itself, because Ctrl-B is tmux's default " +
                 'prefix: typed directly, tmux would swallow the second half and take the next ' +
                 'key as a prefix command. The tmux binding is send-keys, which writes into the ' +
