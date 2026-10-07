@@ -150,7 +150,10 @@ export default {
                 'Pressing it again once the viewer is open is a second ask, for the whole ' +
                 'conversation: Claude writes it into the terminal scrollback and the host opens ' +
                 'copy mode over all of it, so you can search and yank across the lot rather than ' +
-                "the one frame Claude is drawing. So F escalates, and neither ask needs a key.",
+                'the one frame Claude is drawing. So this key goes deeper while there is deeper ' +
+                'to go, and leaves when there is not — in copy mode or hunk there is nothing ' +
+                'further in, so it drops back to Pane. Leave closes what the target has open ' +
+                'without leaving Within; this leaves.',
         },
         TM_EXIT: {
             label: 'Exit',

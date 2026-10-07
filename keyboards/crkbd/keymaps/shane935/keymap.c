@@ -553,10 +553,19 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tmux_switch_mode(_TMUX_PANE);
             }
             return false;
-        // Pressing it again re-runs the entry, which is a no-op in every target
-        // except a Claude pane whose viewer the host has not seen open -- there
-        // it is the retry for a Ctrl-O that did not land.
+        // F goes deeper while there is deeper to go and comes back out when there
+        // is not: on a Claude pane it opens the viewer, then asks for the whole
+        // conversation in copy mode, then leaves. In copy mode or hunk there is
+        // nothing further in, so it leaves straight away -- which is also what
+        // stops it closing and reopening copy mode and losing the cursor.
         case TM_WITHIN:
+            if (tmux_mode == _TMUX_WITHIN) {
+                within_target_t deeper = within_now();
+                if (deeper == WT_COPY || deeper == WT_HUNK) {
+                    tmux_switch_mode(_TMUX_PANE);
+                    return false;
+                }
+            }
             tmux_switch_mode(_TMUX_WITHIN);
             return false;
         case TM_EXIT:
