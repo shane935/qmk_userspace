@@ -25,3 +25,30 @@ for real and makes the offline column honest. Needs a flag for the previous
 liveness, since `host_alive()` is computed rather than stored, and liveness goes
 stale by a timer rather than by a report — so the edge has to be checked
 somewhere that runs without one, probably `housekeeping_task_user`.
+
+## A base layer the host moved is not reported until the next keypress
+
+STATE is sent "on every change to an owned field", and byte 10, the base layer,
+is one the keyboard owns. `kb_apply_os` runs on every CONTEXT and can move the
+layer, but nothing after it sends STATE: the only STATE leaving
+`raw_hid_receive` is the stale-ack resend, and a steady-state CONTEXT acks the
+current seq, so that does not fire.
+
+It shows whenever the host's reported `os` changes while the source is
+`KB_OS_FOLLOW` — a KVM switch, or the daemon coming up against a different
+machine. The keyboard moves the layer and the host's `@kb_os` keeps the old value
+until the next key that sends STATE. First connect escapes it by accident: the
+first CONTEXT usually has not seen HELLO yet, so its ack is stale and the resend
+carries the new layer anyway.
+
+Minor, because the host supplied the `os` that moved the layer and
+`kb_os_wanted` is pure, so a host deriving the value rather than reading byte 10
+never sees it. Only a host that mirrors the byte — which is what the protocol
+tells it to do — lags.
+
+**Fix:** return from `kb_apply_os` whether it moved the layer, and send STATE for
+it in `raw_hid_receive`. The caller has to do that rather than `kb_apply_os`
+itself, because OS_SWAP already sends unconditionally and has to keep doing so:
+tapping off Follow changes byte 10's bit 7 even when the layer stays put. It
+lands in `raw_hid_receive`, which no test reaches, so only a flashed board can
+confirm it.
