@@ -161,19 +161,25 @@ never emits `C-b` for anything.
 F20 is bound in `copy-mode-vi` and `copy-mode` as well as in the root table,
 to the same `copy-mode -q`. It is the only row of this table the keyboard sends
 while a pane is already in a mode — every other row either moves the pane into a
-mode or is sent once it is out of one — and whether a root binding is reachable
-from inside a mode is a tmux detail not worth depending on. Binding it in all
-three costs a line and makes "leave whatever mode this pane is in" true
-unconditionally, including from `choose-tree`, which uses the `copy-mode` table.
-The same applies to `mode-keys`: binding it in both mode tables means it does not
-matter whether the user's is vi or emacs.
+mode or is sent once it is out of one.
 
-The other keys the keyboard sends into a mode that is already open are not rows
-of this table, and the two sets are bound differently. In `choose-tree` it sends
-the four arrows, `M--` and `M-+` to collapse and expand everything, `x` to kill
-whatever is highlighted and `y` to answer the confirmation that raises, and
-`Enter` to choose. Those are tmux's own `copy-mode` defaults and the generated
-conf says nothing about them, because nothing the user can set moves them.
+The two mode-table bindings are belt and braces. A pane in copy mode has its key
+looked up in `copy-mode-vi` or `copy-mode`, and on a miss tmux retries it in the
+root table, so the root binding would fire on its own; binding it in all three
+costs two lines and makes "leave whatever mode this pane is in" true without
+resting on that fallback. There are two mode tables rather than one because
+`mode-keys` decides which of them a pane in copy mode uses, so a key WITHIN
+relies on has to be in both or it works for a vi user and not an emacs one.
+
+`choose-tree` neither uses those tables nor needs to. It sets no mode key table,
+so a pane in it is still on the root table and F20 leaves it through the same
+root binding as everything else. The keys the keyboard sends into it — the four
+arrows, `M--` and `M-+` to collapse and expand everything, `x` to kill whatever
+is highlighted and `y` to answer the prompt that raises, and `Enter` to choose —
+are not bindings in any table at all: tmux handles them inside the mode, which is
+where a key goes when it matches nothing in root. The default root table holds
+only mouse bindings, so nothing shadows them, and the generated conf must keep it
+that way — a plain key bound in root would be taken from `choose-tree`.
 
 Inside copy mode the keyboard sends copy-mode-vi's own keys, and the generated
 conf binds the ones WITHIN uses explicitly so they do not depend on `mode-keys`:
