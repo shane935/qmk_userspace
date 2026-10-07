@@ -47,10 +47,12 @@ static within_action_t resolve_copy(within_key_t key, within_mod_t mod) {
             return SENDS(KC_N);
         case WK_PREV:
             return SENDS(S(KC_N));
-        // copy-mode -q rather than q: q would reach hunk if the host's report
-        // were wrong about which pane this is, and F20 never can.
+        // Escape, which copy-mode-vi reads as clear-selection: it drops a
+        // selection you did not mean and leaves the cursor where it is. Leaving
+        // copy mode is D, which goes to PANE as well, so this key is better
+        // spent on the thing nothing else can do.
         case WK_LEAVE:
-            return SENDS(KC_F20);
+            return SENDS(KC_ESC);
         // The two selections. Only copy mode has any, and a bare Space or V
         // anywhere else would go into the program -- which is why they resolve
         // here with everything else rather than sitting on the layer as plain

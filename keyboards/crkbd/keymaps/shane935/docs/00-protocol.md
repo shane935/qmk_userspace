@@ -161,9 +161,10 @@ never emits `C-b` for anything.
 Inside copy mode the keyboard sends copy-mode-vi's own keys, and the generated
 conf binds the ones WITHIN uses explicitly so they do not depend on `mode-keys`:
 the four arrows, `PageUp`/`PageDown`, `b`/`w` for a word, `0`/`$` for a line,
-`/` `n` `N` for search, `V` to select whole lines, and `Enter` for
-`copy-pipe-and-cancel`. That is the whole set; leaving copy mode and pasting are
-root-table keys, not copy-mode-vi ones.
+`/` `n` `N` for search, `Space` to begin a selection and `V` to select whole
+lines, `Escape` for `clear-selection`, and `Enter` for `copy-pipe-and-cancel`.
+That is the whole set; leaving copy mode and pasting are root-table keys, not
+copy-mode-vi ones, which is why `Escape` is free to clear rather than cancel.
 
 ## Host -> keyboard: CONTEXT
 

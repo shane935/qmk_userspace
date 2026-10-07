@@ -348,9 +348,10 @@ export default {
         },
         TC_LEAVE: {
             label: 'Leave',
-            desc: 'Leave what Within opened',
-            note: 'Closes whatever the target has open, without leaving Within: copy-mode -q in ' +
-                "copy mode, Ctrl-O in Claude's viewer, Escape in hunk. At a Claude prompt there " +
+            desc: 'Undo what the target has open',
+            note: 'Undoes whatever the target has done, without leaving Within: clears the ' +
+                "selection in copy mode, closes the viewer in Claude's, closes what hunk has " +
+                'open. At a Claude prompt there ' +
                 'is nothing open and it sends nothing — never Escape, which would interrupt the ' +
                 'running turn. Closing the viewer lands back on the prompt, which is still a ' +
                 'Claude pane, so the OLED goes from TRSC to CLAUDE rather than out of Within.',

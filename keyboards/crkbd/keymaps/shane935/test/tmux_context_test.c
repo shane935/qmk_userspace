@@ -108,7 +108,7 @@ static const struct {
     {WT_COPY, WK_SEARCH, WM_NONE, KC_SLSH, KC_NO, 0, "copy search"},
     {WT_COPY, WK_NEXT, WM_NONE, KC_N, KC_NO, 0, "copy next match"},
     {WT_COPY, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "copy previous match"},
-    {WT_COPY, WK_LEAVE, WM_NONE, KC_F20, KC_NO, 0, "copy leave is copy-mode -q"},
+    {WT_COPY, WK_LEAVE, WM_NONE, KC_ESC, KC_NO, 0, "copy leave clears the selection"},
     {WT_COPY, WK_COPY, WM_NONE, KC_ENT, KC_NO, 0, "copy yank"},
     {WT_COPY, WK_PASTE, WM_NONE, KC_F20, C(KC_F22), 0, "copy paste leaves then pastes"},
     {WT_COPY, WK_MARK, WM_NONE, KC_SPC, KC_NO, 0, "copy marks a character-wise selection"},
