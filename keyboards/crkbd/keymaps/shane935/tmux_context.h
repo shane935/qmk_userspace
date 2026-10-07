@@ -41,9 +41,10 @@ typedef enum {
     WK_SELECT,
     WK_COPY,
     WK_PASTE,
-    WK_DEEP,
-    // Not a key on the layer: what pressing TM_WITHIN itself has to send to
-    // make the target navigable.
+    // Not a key on the layer: what pressing TM_WITHIN has to do to make the
+    // target navigable. It escalates on a Claude pane -- the first press asks
+    // the host to open the viewer, a second asks for the whole conversation in
+    // copy mode -- so neither of those needs a key of its own.
     WK_ENTER,
     WK__COUNT,
 } within_key_t;

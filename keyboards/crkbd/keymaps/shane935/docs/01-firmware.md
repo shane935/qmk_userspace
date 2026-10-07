@@ -76,9 +76,11 @@ reflash, not a runtime state to carry. There is likewise no runtime branch on
 host liveness for tmux actions.
 
 Program-aware keys are chosen by the keyboard from `ctx` and sent as
-keystrokes. Two keys are intents instead, both because Claude's viewer is
-unobservable from the keyboard: `TC_DEEP` → WITHIN_DEEP, and entering WITHIN on
-a `claude-safe` pane → WITHIN_OPEN.
+keystrokes. The two intents are both reached through `TM_WITHIN` rather than
+having keys of their own, because both are about Claude's viewer and the
+keyboard cannot observe it: entering WITHIN on a `claude-safe` pane is
+WITHIN_OPEN, and entering it again once the host reports the viewer open is
+WITHIN_DEEP.
 
 Intent status, for either: `pending` shows `?`; `done` clears it; `failed`
 restores the previous `tmux_mode` and shows `!` for one second. Acted on when
@@ -103,7 +105,7 @@ window stay, on `S-F19`/`S-F20`/`S-F21`.
 | Y | `TC_NEXT` | next match |
 | U | `TC_BKGD` | background the running tool or agent (Claude only) |
 | I | `TC_UP` | up |
-| O | unused | |
+| O | `TC_SEL` | begin a selection (copy mode only) |
 | P | `TC_LEAVE` | leave what WITHIN opened |
 | H | `TC_PREV` | previous match |
 | J | `TC_LEFT` | previous unit |
@@ -116,12 +118,18 @@ window stay, on `S-F19`/`S-F20`/`S-F21`.
 | / | `TC_SRCH` | search |
 
 Left thumbs: outer `TC_WORD`, middle `TC_LINE`, both held; inner unused.
-Right thumbs unused. Select/yank positions match the existing COPY layer;
-if they differ in the file, keep the file's.
+Right thumbs unused. `TC_SEL` is on O because that is where the COPY layer had
+its `V`, and it resolves like everything else rather than being a plain keycode:
+a bare `V` at a Claude prompt would be typed into the message.
 
-`TC_DEEP` on G while in WITHIN, intent WITHIN_DEEP (copy mode containing
-Claude's whole conversation). Decided in and live: no compile switch. Inert
-outside Claude, and with no daemon to actuate the intent it does nothing.
+Two of the old COPY layer's selection keys have no home in this layout and are
+lost: Space on U (begin a character-wise selection, where `TC_SEL` only does
+whole lines) and Escape on P (clear a selection without leaving copy mode).
+`;`, N and M are free if either is wanted back. Escape also needs the generated
+conf to keep a `clear-selection` binding, since it binds `Escape` to `cancel`.
+
+G is free. WITHIN_DEEP used to have a key there and does not need one: F is
+already inert once the viewer is open, so pressing it again is the ask.
 
 ## WITHIN resolution
 
@@ -154,8 +162,12 @@ Then the key, with `mod` the held thumb:
 
 Entering WITHIN (`TM_WITHIN` from any mode) resolves the same way: target
 `copy` → F19 (`copy-mode`); `claude-safe` → the WITHIN_OPEN intent, and the
-OLED shows `?` until the host reports the transcript; `transcript` and `hunk` →
-nothing, already navigable. Offline the target is always `copy`, so F19 — which
+OLED shows `?` until the host reports the transcript; `transcript` → the
+WITHIN_DEEP intent; `hunk` → nothing, already navigable.
+
+So F escalates on a Claude pane: once for the viewer, again for the whole
+conversation in copy mode. A third press is in the `copy` target by then and
+just re-enters copy mode. Offline the target is always `copy`, so F19 — which
 is why the keyboard never needs to send `Ctrl+o` itself: that path only exists
 when the host is alive to run it.
 
@@ -223,6 +235,10 @@ Both are added to the build with `SRC +=` in `rules.mk`.
 - Daemon, Claude pane: F sends the WITHIN_OPEN intent; OLED shows `CLAUDE ?` until the
   host observes the viewer, then `TRSC`; U sends `Ctrl+X Ctrl+B`; ↓ scrolls a line, WORD+↓ half a page,
   ← → step prompts; P closes the viewer and the OLED shows `CLAUDE`.
+- Daemon, Claude pane with the viewer open: F again shows `?`, then `COPY` once
+  the host has dumped the conversation and opened copy mode, and the vi keys,
+  search and yank then work over the whole conversation rather than one frame.
+  U sends `Ctrl+X Ctrl+B` — BKGD is the one key that means the same in both.
 - Daemon, Claude pane with the viewer closed: ↓ moves the cursor, WORD+↓
   sends PgDn, ← → send nothing, P sends nothing.
 - Daemon, hunk pane: F shows `HUNK`; ← → step hunks, WORD+← → annotated

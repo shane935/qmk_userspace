@@ -113,7 +113,6 @@ static const struct {
     {WT_COPY, WK_SELECT, WM_NONE, S(KC_V), KC_NO, 0, "copy begins a selection"},
     {WT_COPY, WK_ENTER, WM_NONE, KC_F19, KC_NO, 0, "entering copy opens copy mode"},
     {WT_COPY, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "copy has nothing to background"},
-    {WT_COPY, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep is inert outside claude"},
 
     // transcript -- the viewer is open and the unit is the prompt
     {WT_TRANSCRIPT, WK_UP, WM_NONE, KC_UP, KC_NO, 0, "transcript up a line"},
@@ -132,11 +131,10 @@ static const struct {
     {WT_TRANSCRIPT, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "transcript previous match"},
     {WT_TRANSCRIPT, WK_LEAVE, WM_NONE, C(KC_O), KC_NO, 0, "transcript leave closes the viewer"},
     {WT_TRANSCRIPT, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "transcript background is a tmux key"},
-    {WT_TRANSCRIPT, WK_DEEP, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_DEEP, "deep is an intent here"},
     {WT_TRANSCRIPT, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "nothing to select in the viewer"},
     {WT_TRANSCRIPT, WK_COPY, WM_NONE, KC_NO, KC_NO, 0, "nothing to yank in the viewer"},
     {WT_TRANSCRIPT, WK_PASTE, WM_NONE, KC_NO, KC_NO, 0, "nothing to paste in the viewer"},
-    {WT_TRANSCRIPT, WK_ENTER, WM_NONE, KC_NO, KC_NO, 0, "the viewer is already navigable"},
+    {WT_TRANSCRIPT, WK_ENTER, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_DEEP, "entering again asks for the whole conversation"},
 
     // claude-safe -- the viewer is not confirmed open, so a live prompt is possible
     {WT_CLAUDE_SAFE, WK_UP, WM_NONE, KC_UP, KC_NO, 0, "claude-safe up moves the cursor"},
@@ -154,7 +152,6 @@ static const struct {
     {WT_CLAUDE_SAFE, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "claude-safe background is a tmux key"},
     {WT_CLAUDE_SAFE, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "claude-safe select would type a V"},
     {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_OPEN, "entering claude asks the host to open the viewer"},
-    {WT_CLAUDE_SAFE, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep needs the viewer confirmed open"},
 
     // hunk -- the ladder is hunk, annotated hunk, file
     {WT_HUNK, WK_UP, WM_NONE, KC_UP, KC_NO, 0, "hunk up a line"},
@@ -176,7 +173,6 @@ static const struct {
     {WT_HUNK, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "hunk has no selection"},
     {WT_HUNK, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to background"},
     {WT_HUNK, WK_ENTER, WM_NONE, KC_NO, KC_NO, 0, "hunk is already navigable"},
-    {WT_HUNK, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep is inert in hunk"},
 };
 
 static void test_table(void) {

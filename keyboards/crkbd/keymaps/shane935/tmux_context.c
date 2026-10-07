@@ -95,9 +95,13 @@ static within_action_t resolve_transcript(within_key_t key, within_mod_t mod) {
         // send-keys, which writes into the pane past tmux's key tables.
         case WK_BKGD:
             return SENDS(C(KC_F23));
-        // The one intent in the firmware: only the host can tell when Claude has
-        // finished writing the conversation into the scrollback.
-        case WK_DEEP:
+        // Entering WITHIN again, from a viewer the host has already confirmed
+        // open, asks for the whole conversation: [ writes it into the terminal's
+        // own scrollback so copy mode can see all of it rather than the one frame
+        // Claude is drawing. An intent because only the host can tell when the
+        // writing has stopped. So F escalates -- once for the viewer, again for
+        // everything in it -- and this needs no key of its own.
+        case WK_ENTER:
             return INTENT(KB_INTENT_WITHIN_DEEP);
         default:
             return NOTHING;

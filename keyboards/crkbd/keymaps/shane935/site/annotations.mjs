@@ -146,7 +146,11 @@ export default {
                 'sends the Ctrl-O, watches whether the viewer actually opened, and tries again if ' +
                 'it did not. A busy pane can swallow that key and the keyboard would never know. ' +
                 'Which target it is comes from the host, not from a key: there is no App key any ' +
-                'more and nothing to cycle. The OLED shows ? until the viewer is confirmed open.',
+                'more and nothing to cycle. The OLED shows ? until the viewer is confirmed open. ' +
+                'Pressing it again once the viewer is open is a second ask, for the whole ' +
+                'conversation: Claude writes it into the terminal scrollback and the host opens ' +
+                'copy mode over all of it, so you can search and yank across the lot rather than ' +
+                "the one frame Claude is drawing. So F escalates, and neither ask needs a key.",
         },
         TM_EXIT: {
             label: 'Exit',
@@ -347,18 +351,6 @@ export default {
                 'prefix: typed directly, tmux would swallow the second half and take the next ' +
                 'key as a prefix command. The tmux binding is send-keys, which writes into the ' +
                 "pane past tmux's own key tables.",
-        },
-        TC_DEEP: {
-            label: 'Deep',
-            desc: "Copy mode over Claude's whole conversation",
-            note: 'One of the two keys that ask the host to do something rather than doing it ' +
-                'themselves; entering Within on a Claude pane is the other. ' +
-                'Inside the viewer, [ writes the entire conversation into the terminal ' +
-                'scrollback — but that takes time the keyboard cannot measure, so the host ' +
-                'watches the pane until it stops growing and only then opens copy mode. The OLED ' +
-                'shows ? while it works and ! if it gave up, and a failure puts the mode back ' +
-                'where this key found it. Inert in every target but an open viewer: with the ' +
-                'viewer shut there is nothing to dump and the host would only refuse.',
         },
         TC_WORD: {
             hold: { label: 'Word', desc: 'Held: a bigger step' },

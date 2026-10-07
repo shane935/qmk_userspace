@@ -71,7 +71,6 @@ enum custom_keycodes {
     TC_SEL,
     TC_COPY,
     TC_PSTE,
-    TC_DEEP,
     TC_WORD,
     TC_LINE,
 };
@@ -218,7 +217,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TC_NEXT,      TC_BKGD,        TC_UP,       TC_SEL,     TC_LEAVE,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      TC_DEEP,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      _______,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      TC_SRCH,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -672,9 +671,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         // next report says so.
         case TC_LEAVE:
             within_send(WK_LEAVE);
-            return false;
-        case TC_DEEP:
-            within_send(WK_DEEP);
             return false;
         // The two that end the mode as well as doing something. Both are copy
         // mode only, so the mode only moves if the resolver actually sent
