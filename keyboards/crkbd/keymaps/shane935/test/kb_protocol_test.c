@@ -27,7 +27,10 @@ static void check_eq(unsigned got, unsigned want, const char *what) {
     }
 }
 
-// A STATE with every field distinct, so a swapped pair of offsets cannot pass.
+// A STATE carrying real protocol values, for the tests that are about meaning.
+// Deliberately not used for the offset test: the real values collide -- KB_STATE,
+// KB_OS_MAC and KB_EVENT_TMUX_KEY are all 2, and KB_MODE_WITHIN is 5 like the
+// WORD modifier -- so a swapped pair of offsets would read as correct.
 static kb_state_t sample_state(void) {
     kb_state_t s = {
         .type        = KB_STATE,
@@ -37,7 +40,7 @@ static kb_state_t sample_state(void) {
         .intent_arg  = 0x33,
         .nonce       = 0x44,
         .mode        = KB_MODE_WITHIN,
-        .mod         = 5,
+        .mod         = 6,
         .os          = KB_OS_MAC,
         .os_override = false,
         .host_alive  = true,
@@ -48,25 +51,42 @@ static kb_state_t sample_state(void) {
 }
 
 static void test_state_offsets(void) {
-    kb_state_t s = sample_state();
-    uint8_t    buf[KB_REPORT_SIZE];
+    // Sentinels, not protocol values: this test is only about which byte each
+    // field lands in, and every one has to differ for that to mean anything.
+    // 0x2A for os keeps bit 7 clear so the override bit stays its own test.
+    kb_state_t s = {
+        .type        = 0xA1,
+        .seq         = 0xA2,
+        .ack         = 0xA3,
+        .intent      = 0xA4,
+        .intent_arg  = 0xA5,
+        .nonce       = 0xA6,
+        .mode        = 0xA7,
+        .mod         = 0xA8,
+        .os          = 0x2A,
+        .os_override = false,
+        .host_alive  = true,
+        .event       = 0xA9,
+        .event_arg   = 0xAA,
+    };
+    uint8_t buf[KB_REPORT_SIZE];
     memset(buf, 0xEE, sizeof(buf));
     kb_state_report(buf, &s);
 
     check_eq(buf[0], KB_MAGIC, "byte 0 magic");
     check_eq(buf[1], KB_VERSION, "byte 1 version");
-    check_eq(buf[2], 0x11, "byte 2 seq");
-    check_eq(buf[3], 0x22, "byte 3 ack");
-    check_eq(buf[4], KB_STATE, "byte 4 type");
-    check_eq(buf[5], KB_INTENT_WITHIN_DEEP, "byte 5 intent");
-    check_eq(buf[6], 0x33, "byte 6 intent arg");
-    check_eq(buf[7], 0x44, "byte 7 nonce");
-    check_eq(buf[8], KB_MODE_WITHIN, "byte 8 mode");
-    check_eq(buf[9], 5, "byte 9 held modifier");
-    check_eq(buf[10], KB_OS_MAC, "byte 10 os");
+    check_eq(buf[2], 0xA2, "byte 2 seq");
+    check_eq(buf[3], 0xA3, "byte 3 ack");
+    check_eq(buf[4], 0xA1, "byte 4 type");
+    check_eq(buf[5], 0xA4, "byte 5 intent");
+    check_eq(buf[6], 0xA5, "byte 6 intent arg");
+    check_eq(buf[7], 0xA6, "byte 7 nonce");
+    check_eq(buf[8], 0xA7, "byte 8 mode");
+    check_eq(buf[9], 0xA8, "byte 9 held modifier");
+    check_eq(buf[10], 0x2A, "byte 10 os");
     check_eq(buf[11], KB_FLAG_HOST_ALIVE, "byte 11 flags");
-    check_eq(buf[12], KB_EVENT_TMUX_KEY, "byte 12 event");
-    check_eq(buf[13], 0x55, "byte 13 event arg");
+    check_eq(buf[12], 0xA9, "byte 12 event");
+    check_eq(buf[13], 0xAA, "byte 13 event arg");
 
     // 14..31 are zero, and the 0xEE fill is what proves they are written rather
     // than left as whatever the caller's stack held.
@@ -160,14 +180,20 @@ static void test_context_fields(void) {
 static void test_context_label_uses_all_sixteen(void) {
     uint8_t      buf[KB_REPORT_SIZE];
     kb_context_t c;
-    memset(&c, 0, sizeof(c));
+    // Filled with non-zero, not zeroed: a zeroed struct already has a
+    // terminator sitting at byte 16, so the parse would appear to write one
+    // whether it does or not.
+    memset(&c, 0xFF, sizeof(c));
     // Exactly 16 characters, so the wire field is full and the terminator has
     // to come from the seventeenth byte rather than from the host.
     fill_context(buf, "0123456789abcdef");
 
     check(kb_context_parse(buf, KB_REPORT_SIZE, &c), "a full label parses");
-    check(strcmp(c.label, "0123456789abcdef") == 0, "a 16 character label is not truncated");
-    check_eq((unsigned)strlen(c.label), 16, "a 16 character label is terminated");
+    check_eq((unsigned char)c.label[16], 0, "a full 16 byte label gets a terminator");
+    // Only safe to read as a string once the terminator is confirmed.
+    if (c.label[16] == '\0') {
+        check(strcmp(c.label, "0123456789abcdef") == 0, "a 16 character label is not truncated");
+    }
 }
 
 static void test_context_rejects(void) {
