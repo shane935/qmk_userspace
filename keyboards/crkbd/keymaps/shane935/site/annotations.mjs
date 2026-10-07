@@ -350,10 +350,9 @@ export default {
             label: 'Leave',
             desc: 'Undo what the target has open',
             note: 'Undoes whatever the target has done, without leaving Within: clears the ' +
-                "selection in copy mode, closes the viewer in Claude's, closes what hunk has " +
-                'open. At a Claude prompt there ' +
+                "selection in copy mode, closes the viewer in Claude's. At a Claude prompt there " +
                 'is nothing open and it sends nothing — never Escape, which would interrupt the ' +
-                'running turn. Closing the viewer lands back on the prompt, which is still a ' +
+                'running turn. Nothing in hunk either, which drives itself. Closing the viewer lands back on the prompt, which is still a ' +
                 'Claude pane, so the OLED goes from TRSC to CLAUDE rather than out of Within.',
         },
         TC_BKGD: {

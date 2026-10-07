@@ -153,9 +153,8 @@ static within_action_t resolve_hunk(within_key_t key, within_mod_t mod) {
             return SENDS(KC_N);
         case WK_PREV:
             return SENDS(S(KC_N));
-        // hunk takes Escape to close what it has open. Never q, which quits it.
-        case WK_LEAVE:
-            return SENDS(KC_ESC);
+        // Nothing for LEAVE: hunk has nothing WITHIN opened, and an Escape it did
+        // not ask for is not worth sending on the chance it closes something.
         default:
             return NOTHING;
     }

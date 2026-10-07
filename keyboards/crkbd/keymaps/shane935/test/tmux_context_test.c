@@ -173,7 +173,7 @@ static const struct {
     {WT_HUNK, WK_SEARCH, WM_NONE, KC_SLSH, KC_NO, 0, "hunk search"},
     {WT_HUNK, WK_NEXT, WM_NONE, KC_N, KC_NO, 0, "hunk next match"},
     {WT_HUNK, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "hunk previous match"},
-    {WT_HUNK, WK_LEAVE, WM_NONE, KC_ESC, KC_NO, 0, "hunk leave is Escape, never q"},
+    {WT_HUNK, WK_LEAVE, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to leave"},
     {WT_HUNK, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to mark"},
     {WT_HUNK, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "hunk has no selection"},
     {WT_HUNK, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to background"},
