@@ -91,6 +91,8 @@ choose-tree's own x, y, Enter and arrows, and copy-mode-vi's motions. The
 generated conf binds the copy-mode-vi keys WITHIN relies on explicitly so they
 do not depend on `mode-keys`.
 
-There is exactly one intent, WITHIN_DEEP. The host is only asked when the
-keyboard needs it to wait for something it cannot see; everything else the
+There are two intents, WITHIN_DEEP and WITHIN_OPEN, and both are about Claude's
+transcript viewer, which the keyboard has no way to observe. The host is asked
+only where it can do something the keyboard cannot: wait for the conversation to
+stop being written, or retry a Ctrl-O a busy pane swallowed. Everything else the
 keyboard decides itself from the last report.

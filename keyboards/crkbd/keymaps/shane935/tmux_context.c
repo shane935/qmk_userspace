@@ -29,8 +29,8 @@ within_target_t within_target(const kb_context_t *ctx, bool host_alive) {
     return WT_COPY;
 }
 
-// tmux's copy-mode-vi keys, which is what the COPY layer has always sent. WORD
-// leaves up and down alone; only LINE changes all four.
+// tmux's copy-mode-vi keys. WORD leaves up and down alone; only LINE changes all
+// four.
 static within_action_t resolve_copy(within_key_t key, within_mod_t mod) {
     switch (key) {
         case WK_UP:

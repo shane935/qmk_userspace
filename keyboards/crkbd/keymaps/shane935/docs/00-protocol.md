@@ -75,7 +75,7 @@ reply to every CONTEXT whose `ack` is stale.
 | 5 | intent | `0x00` none, else an intent id below |
 | 6 | intent arg | per intent |
 | 7 | intent nonce | uint8, increments per intent; host echoes it |
-| 8 | mode | `0` tmux layer off, `1` TMUX base, `2` TREE, `3` WINDOW, `4` PANE, `5` WITHIN |
+| 8 | mode | `0` tmux layer off, `1` reserved (the TMUX base is never the top mode layer, so nothing sends it), `2` TREE, `3` WINDOW, `4` PANE, `5` WITHIN |
 | 9 | held modifier | `0` none, `1` RESIZE, `2` SPLIT, `3` MOVE, `4` reserved, `5` WORD, `6` LINE |
 | 10 | base layer | `0` unknown, `1` linux, `2` mac; bit 7 set = manual override active |
 | 11 | flags | bit0 = keyboard currently considers host alive |
@@ -159,22 +159,30 @@ it works whatever the prefix is bound to. That is the only reason the firmware
 never emits `C-b` for anything.
 
 F20 is bound in `copy-mode-vi` and `copy-mode` as well as in the root table,
-to the same `copy-mode -q`. It is the only key the keyboard sends while a pane is
-already in a mode — every other row either moves the pane into a mode or is sent
-once it is out of one — and whether a root binding is reachable from inside a
-mode is a tmux detail not worth depending on. Binding it in all three costs a
-line and makes "leave whatever mode this pane is in" true unconditionally,
-including from `choose-tree`, which uses the `copy-mode` table. The same applies
-to `mode-keys`: binding it in both mode tables means it does not matter whether
-the user's is vi or emacs.
+to the same `copy-mode -q`. It is the only row of this table the keyboard sends
+while a pane is already in a mode — every other row either moves the pane into a
+mode or is sent once it is out of one — and whether a root binding is reachable
+from inside a mode is a tmux detail not worth depending on. Binding it in all
+three costs a line and makes "leave whatever mode this pane is in" true
+unconditionally, including from `choose-tree`, which uses the `copy-mode` table.
+The same applies to `mode-keys`: binding it in both mode tables means it does not
+matter whether the user's is vi or emacs.
+
+The other keys the keyboard sends into a mode that is already open are not rows
+of this table, and the two sets are bound differently. In `choose-tree` it sends
+the four arrows, `M--` and `M-+` to collapse and expand everything, `x` to kill
+whatever is highlighted and `y` to answer the confirmation that raises, and
+`Enter` to choose. Those are tmux's own `copy-mode` defaults and the generated
+conf says nothing about them, because nothing the user can set moves them.
 
 Inside copy mode the keyboard sends copy-mode-vi's own keys, and the generated
 conf binds the ones WITHIN uses explicitly so they do not depend on `mode-keys`:
 the four arrows, `PageUp`/`PageDown`, `b`/`w` for a word, `0`/`$` for a line,
 `/` `n` `N` for search, `Space` to begin a selection and `V` to select whole
 lines, `Escape` for `clear-selection`, and `Enter` for `copy-pipe-and-cancel`.
-That is the whole set; leaving copy mode and pasting are root-table keys, not
-copy-mode-vi ones, which is why `Escape` is free to clear rather than cancel.
+That is the whole copy-mode set; leaving copy mode and pasting are root-table
+keys, not copy-mode-vi ones, which is why `Escape` is free to clear rather than
+cancel.
 
 ## Host -> keyboard: CONTEXT
 
@@ -215,8 +223,10 @@ emits keystrokes) but still applies `os`.
   marks it differently for a second. Desired state is not touched by any of
   them: both intents are entered from WITHIN and both succeed by changing what
   the host reports, so there is nothing for a failure to undo.
-- transcript `unknown` while program = claude: the keyboard shows `?` and
-  uses the `claude-safe` key set until the host reports `open` or `closed`.
+- transcript anything but `open` while program = claude: the `claude-safe` key
+  set, which is what `closed` gets as well as `unknown`. Only `open` leaves it.
+  `unknown` additionally shows `?`, because there the keyboard is still waiting
+  to hear rather than being told the viewer is shut.
 - contradiction rule: a CONTEXT showing no mode open while desired is TREE or
   WITHIN (copy), with intent status `none`, sets desired to PANE.
 

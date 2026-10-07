@@ -233,11 +233,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #define TMUX_OFF 0
 static uint8_t tmux_mode = TMUX_OFF;
 
-// The left thumb modifier in effect. PANE, WINDOW and APP hold theirs, COPY
-// toggles its own, and only ever one at a time. PANE and WINDOW both call their
-// inner thumb MOVE and neither can be on while the other is, so they share a
-// value. These are the values STATE byte 9 carries, so 4 stays empty rather
-// than being reused: the protocol reserved it when WINDOW's NEW thumb went.
+// The left thumb modifier in effect. Every mode's is held, and only ever one at
+// a time. PANE and WINDOW both call their inner thumb MOVE and neither can be on
+// while the other is, so they share a value. These are the values STATE byte 9
+// carries, so 4 stays empty rather than being reused: the protocol reserved it
+// when WINDOW's NEW thumb went.
 enum tmux_modifier {
     TMOD_NONE,
     TMOD_RESIZE,
@@ -306,9 +306,6 @@ static uint8_t kb_mode_of(uint8_t mode) {
             return KB_MODE_WINDOW;
         case _TMUX_PANE:
             return KB_MODE_PANE;
-        // The protocol has one WITHIN where the keymap still has APP and COPY.
-        // They become one layer in a later change; until then both report as
-        // the mode they are turning into.
         case _TMUX_WITHIN:
             return KB_MODE_WITHIN;
         default:
@@ -375,7 +372,7 @@ static void tmux_fkey(uint8_t fkey, uint8_t mods) {
     send_state(0, 0);
 }
 
-// TREE and COPY put the pane into a real tmux mode rather than just changing
+// TREE and WITHIN put the pane into a real tmux mode rather than just changing
 // what the keyboard sends, so the pane has to be taken back out of it before
 // anything else happens.
 static void tmux_quit_mode(void) {
@@ -398,8 +395,8 @@ static void tmux_set_mode(uint8_t mode) {
         layer_on(mode);
     }
     tmux_mode = mode;
-    // The thumb modifiers belong to the mode they were pressed in, so a COPY
-    // toggle can never survive into PANE.
+    // The thumb modifiers belong to the mode they were pressed in, so WITHIN's
+    // WORD can never survive into PANE.
     tmux_mod = TMOD_NONE;
     send_state(0, 0);
 }
@@ -499,8 +496,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         tmux_kill_pending = false;
     }
 
-    // PANE's, WINDOW's and APP's thumb modifiers are held, so they are the only
-    // keys that have anything to do on the release.
+    // Every thumb modifier is held, so these are the only keys that have
+    // anything to do on the release.
     switch (keycode) {
         case TP_RSZE:
             tmux_set_mod(record->event.pressed ? TMOD_RESIZE : TMOD_NONE);
@@ -512,8 +509,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TW_MOVE:
             tmux_set_mod(record->event.pressed ? TMOD_MOVE : TMOD_NONE);
             return false;
-        // WITHIN's two are held like PANE's, not toggled as COPY's used to be:
-        // one unit per thumb, and nothing survives letting go.
+        // WITHIN's two are held like PANE's: one unit per thumb, and nothing
+        // survives letting go.
         case TC_WORD:
             tmux_set_mod(record->event.pressed ? TMOD_WORD : TMOD_NONE);
             return false;
@@ -536,7 +533,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             send_state(0, 0);
             return false;
 
-        // Tapping the current mode's own key quits TREE or COPY and falls back
+        // Tapping the current mode's own key quits TREE or WITHIN and falls back
         // to PANE; in PANE and WINDOW there is nothing open to quit.
         case TMUX_ON:
             tmux_set_mode(_TMUX_PANE);
@@ -562,14 +559,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TM_WITHIN:
             if (tmux_mode == _TMUX_WITHIN) {
                 switch (within_now()) {
-                    // Unwind one level and stay in WITHIN. Over a Claude viewer
-                    // that lands back in the viewer -- it is still open
-                    // underneath -- and the next F asks for the conversation
-                    // again. On a pane with nothing underneath, closing copy
-                    // mode leaves WITHIN with nothing open, which is what the
-                    // contradiction rule catches, so the next report moves to
-                    // PANE. That is right rather than unfortunate: WITHIN
-                    // without copy mode sends vi letters to the program.
                     // Copy mode is as far in as it goes, so F comes out of it.
                     // A Claude pane has the viewer underneath, so that lands back
                     // in the viewer and WITHIN still means something. Anything
