@@ -177,15 +177,26 @@ manual override is active.
 
 ## Code layout
 
-Put the target and key resolution in `tmux_context.c/.h` as pure functions
-of `ctx`, `tmux_mode` and `tmux_mod`, returning a keycode or an intent. The
-keymap calls them; nothing else needs to know the tables. It can be compiled
-natively for a unit test if wanted; the rest of the keymap needs none.
+The wire format is in `kb_protocol.c/.h`: the constants, `kb_state_report`,
+`kb_context_parse` and `kb_tmux_event_arg`. It includes no QMK headers and
+knows no layer number, keycode or `TMOD_`, so it builds natively —
+`test/run.sh` compiles it against `test/kb_protocol_test.c` with nothing but
+a C compiler. The keymap translates its own enums into protocol values
+(`kb_mode_of`, `kb_mod_of`) and owns the `raw_hid_send`/`receive` wiring, the
+rules that touch layers, and the OLED.
+
+Put the target and key resolution in `tmux_context.c/.h` on the same terms:
+pure functions of `ctx`, `tmux_mode` and `tmux_mod`, returning a keycode or
+an intent, with its own tests under `test/`. The keymap calls them; nothing
+else needs to know the tables.
+
+Both are added to the build with `SRC +=` in `rules.mk`.
 
 ## Acceptance (QMK distrobox build, then hardware)
 
 - Compiles with `RAW_ENABLE = yes`; every `LAYOUT_split_3x5_3` block has 36
   entries.
+- `test/run.sh` passes.
 - No daemon: TREE/WINDOW/PANE work with no prefix (each key is one tmux
   root binding); WITHIN is tmux copy mode with WORD/LINE, select, yank,
   search; OLED shows `~`.

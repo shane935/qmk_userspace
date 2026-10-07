@@ -1,4 +1,6 @@
 #include QMK_KEYBOARD_H
+
+#include "kb_protocol.h"
 #ifdef RAW_ENABLE
 #    include "raw_hid.h"
 #endif
@@ -288,47 +290,16 @@ static bool tmux_transcript = false;
 // answer. True between those two presses.
 static bool tmux_kill_pending = false;
 
-// The protocol in docs/00-protocol.md. Every report in both directions is
-// exactly 32 bytes, zero padded -- a protocol size, not QMK's: RAW_EPSIZE is
-// also 32, but it lives in a tmk_core header keymaps do not get and is 8 on a
-// vusb board.
-#define KB_REPORT_SIZE 32
-#define KB_MAGIC 0xA5
-#define KB_VERSION 2
-#define KB_HELLO 0x01
-#define KB_STATE 0x02
-#define KB_CONTEXT 0x81
-#define KB_SEQ_NONE 0xFF
-// The host sends a CONTEXT every 500 ms whether anything changed or not, so
-// this is three missed reports.
-#define KB_HOST_TIMEOUT_MS 1500
+// What the host reports. Reports only: nothing in here is ever a command, and
+// the keyboard's desired state above is never overwritten by it except through
+// the rules in raw_hid_receive.
+static kb_context_t ctx = {.seq = KB_SEQ_NONE};
 
-// STATE byte 8. Not the layer numbers: the protocol numbers the modes itself,
-// and knows nothing of the keyboard's layer stack.
-enum kb_mode_byte { KB_MODE_OFF, KB_MODE_TMUX, KB_MODE_TREE, KB_MODE_WINDOW, KB_MODE_PANE, KB_MODE_WITHIN };
-// STATE byte 10.
-enum kb_os_byte { KB_OS_UNKNOWN, KB_OS_LINUX, KB_OS_MAC };
-#define KB_OS_OVERRIDE 0x80
-// STATE byte 12.
-enum kb_event_byte { KB_EVENT_NONE, KB_EVENT_CLAUDE_TRSC, KB_EVENT_TMUX_KEY, KB_EVENT_COPY_KEY };
-// CONTEXT byte 7.
-#define KB_TMUX_PRESENT 0x01
-#define KB_TMUX_COPY_MODE 0x04
-#define KB_TMUX_OTHER_MODE 0x08
-// CONTEXT byte 12.
-enum kb_intent_status { KB_INTENT_NONE, KB_INTENT_PENDING, KB_INTENT_DONE, KB_INTENT_FAILED };
-
-// Everything the host owns. Reports only: nothing in here is ever a command,
-// and the keyboard's own desired state above is never overwritten by it except
-// through the rules in raw_hid_receive.
-static struct {
-    uint32_t last_ctx_ms;
-    uint8_t  os, program, tmux_bits, transcript, phase, perm;
-    uint8_t  intent_nonce, intent_status;
-    uint8_t  window, pane;
-    char     label[17];
-    uint8_t  host_seq, my_seq, nonce;
-} ctx = {.host_seq = KB_SEQ_NONE};
+// The keyboard's side of the link: when the last CONTEXT landed, and the two
+// counters STATE carries. Zero until the first CONTEXT, which is what stops the
+// first 1.5 s after boot from reading as alive.
+static uint32_t ctx_last_ms;
+static uint8_t  ctx_my_seq, ctx_nonce;
 
 // What the keyboard just did, for the host to schedule its observation around.
 // It describes one keypress, so send_state clears it on the way out.
@@ -342,10 +313,9 @@ enum kb_os_source { KB_OS_FOLLOW, KB_OS_FORCE_MAC, KB_OS_FORCE_LINUX };
 static uint8_t kb_os_source = KB_OS_FOLLOW;
 
 // Evaluated at the keypress and never cached: a mode entered while the host was
-// alive can be left after it has died. last_ctx_ms is zero until the first
-// CONTEXT, which stops the first 1.5 s after boot from reading as alive.
+// alive can be left after it has died.
 static bool host_alive(void) {
-    return ctx.last_ctx_ms != 0 && timer_elapsed32(ctx.last_ctx_ms) < KB_HOST_TIMEOUT_MS;
+    return ctx_last_ms != 0 && timer_elapsed32(ctx_last_ms) < KB_HOST_TIMEOUT_MS;
 }
 
 // Puts the base layer where the source in charge says it should be. Following a
@@ -373,6 +343,13 @@ static void kb_apply_os(void) {
     }
 }
 
+#ifdef RAW_ENABLE
+// The two translations between the keymap's own enums and the protocol's values.
+// They live here rather than in kb_protocol.c because a layer number and a TMOD_
+// are the keymap's business, and the wire format should not have heard of
+// either. Nothing but STATE needs them.
+//
+// The keymap's layer number to the protocol's mode.
 static uint8_t kb_mode_of(uint8_t mode) {
     switch (mode) {
         case _TMUX_TREE:
@@ -406,28 +383,32 @@ static uint8_t kb_mod_of(uint8_t mod) {
     }
 }
 
-#ifdef RAW_ENABLE
 // Sent on every change to a field the keyboard owns, on every intent, on
 // connect, and whenever a CONTEXT turns out to be answering an older STATE.
 static void send_state_msg(uint8_t type, uint8_t intent, uint8_t arg) {
-    uint8_t report[KB_REPORT_SIZE] = {0};
-    report[0]                  = KB_MAGIC;
-    report[1]                  = KB_VERSION;
-    report[2]                  = ++ctx.my_seq;
-    report[3]                  = ctx.host_seq;
-    report[4]                  = type;
-    report[5]                  = intent;
-    report[6]                  = arg;
     // The nonce is what makes an intent one-shot: the host actuates once per
     // nonce, so a resend of the same intent is a resend and not a second go.
-    report[7]  = intent ? ++ctx.nonce : ctx.nonce;
-    report[8]  = kb_mode_of(tmux_mode);
-    report[9]  = kb_mod_of(tmux_mod);
-    report[10] = (get_highest_layer(default_layer_state) == _LINUX ? KB_OS_LINUX : KB_OS_MAC) | (kb_os_source == KB_OS_FOLLOW ? 0 : KB_OS_OVERRIDE);
-    report[11] = host_alive() ? 0x01 : 0x00;
-    report[12] = kb_event;
-    report[13] = kb_event_arg;
-    raw_hid_send(report, sizeof(report));
+    if (intent) {
+        ctx_nonce++;
+    }
+    kb_state_t state = {
+        .type        = type,
+        .seq         = ++ctx_my_seq,
+        .ack         = ctx.seq,
+        .intent      = intent,
+        .intent_arg  = arg,
+        .nonce       = ctx_nonce,
+        .mode        = kb_mode_of(tmux_mode),
+        .mod         = kb_mod_of(tmux_mod),
+        .os          = get_highest_layer(default_layer_state) == _LINUX ? KB_OS_LINUX : KB_OS_MAC,
+        .os_override = kb_os_source != KB_OS_FOLLOW,
+        .host_alive  = host_alive(),
+        .event       = kb_event,
+        .event_arg   = kb_event_arg,
+    };
+    uint8_t report[KB_REPORT_SIZE];
+    kb_state_report(report, &state);
+    raw_hid_send(report, KB_REPORT_SIZE);
     kb_event     = KB_EVENT_NONE;
     kb_event_arg = 0;
 }
@@ -455,7 +436,7 @@ static void tmux_fkey(uint8_t fkey, uint8_t mods) {
     // out so the host knows what to watch for, and in the same encoding the
     // table uses: the row number, plus a bit per modifier.
     kb_event     = KB_EVENT_TMUX_KEY;
-    kb_event_arg = (fkey - KC_F13 + 1) | ((mods & MOD_LSFT) ? 0x10 : 0) | ((mods & MOD_LCTL) ? 0x20 : 0) | ((mods & MOD_LALT) ? 0x40 : 0);
+    kb_event_arg = kb_tmux_event_arg(fkey - KC_F13 + 1, mods & MOD_LSFT, mods & MOD_LCTL, mods & MOD_LALT);
     send_state(0, 0);
 }
 
@@ -824,27 +805,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 #ifdef RAW_ENABLE
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    if (length < KB_REPORT_SIZE || data[0] != KB_MAGIC || data[1] != KB_VERSION || data[4] != KB_CONTEXT) {
+    if (!kb_context_parse(data, length, &ctx)) {
         return;
     }
-    ctx.host_seq      = data[2];
-    ctx.os            = data[5];
-    ctx.program       = data[6];
-    ctx.tmux_bits     = data[7];
-    ctx.transcript    = data[8];
-    ctx.phase         = data[9];
-    ctx.perm          = data[10];
-    ctx.intent_nonce  = data[11];
-    ctx.intent_status = data[12];
-    ctx.window        = data[13];
-    ctx.pane          = data[14];
-    memcpy(ctx.label, &data[15], 16);
-    ctx.label[16] = '\0';
     // host_alive reads zero as "no CONTEXT yet", and timer_read32 can
     // legitimately return zero, so that one value is never stored.
-    ctx.last_ctx_ms = timer_read32();
-    if (ctx.last_ctx_ms == 0) {
-        ctx.last_ctx_ms = 1;
+    ctx_last_ms = timer_read32();
+    if (ctx_last_ms == 0) {
+        ctx_last_ms = 1;
     }
 
     kb_apply_os();
@@ -863,7 +831,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     // say the current one again. The host acks the latest report it has seen
     // rather than the one it is replying to, so a STATE that crossed a CONTEXT
     // in flight costs one extra round trip and then settles.
-    if (data[3] != ctx.my_seq) {
+    if (ctx.ack != ctx_my_seq) {
         send_state(0, 0);
     }
 }
