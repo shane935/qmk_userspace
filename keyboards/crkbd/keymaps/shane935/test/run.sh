@@ -32,6 +32,30 @@ JS
 fi
 
 status=0
+
+# keymap.c cannot be compiled without QMK, but its preprocessor directives can
+# be checked without it, and an #ifdef that loses its #else is exactly the kind
+# of break that survives a careful read. All four combinations, because the
+# RAW_ENABLE-off branch defines send_state as a macro and is never built here.
+cc_pp="${CC:-cc}"
+pp_target=""
+if [ -n "$WASI_SDK" ]; then
+    cc_pp="$WASI_SDK/bin/clang"
+    pp_target="--target=wasm32-wasip1"
+fi
+mkdir -p "$tmp/ppstub"
+: > "$tmp/ppstub/qmk_stub.h"
+for raw in -DRAW_ENABLE -URAW_ENABLE; do
+    for oled in -DOLED_ENABLE -UOLED_ENABLE; do
+        # shellcheck disable=SC2086
+        if ! "$cc_pp" -E -P $pp_target -DQMK_KEYBOARD_H='"qmk_stub.h"' "$raw" "$oled" -I"$tmp/ppstub" -I"$here/.." $inc "$here/../keymap.c" -o /dev/null; then
+            echo "keymap.c: preprocessor failed with $raw $oled"
+            status=1
+        fi
+    done
+done
+[ "$status" = 0 ] && echo "keymap.c: directives balanced in all four builds"
+
 for t in "$here"/*_test.c; do
     name=$(basename "$t" .c)
     if [ -n "$WASI_SDK" ]; then
