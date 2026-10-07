@@ -290,6 +290,9 @@ static void kb_apply_os(void) {
         set_single_persistent_default_layer(layer);
     }
 }
+#else
+#    define send_state(intent, arg) ((void)0)
+#endif
 
 #ifdef RAW_ENABLE
 // The two translations between the keymap's own enums and the protocol's values.
@@ -745,7 +748,10 @@ void keyboard_post_init_user(void) {
 #ifdef OLED_ENABLE
 bool oled_task_user(void) {
     if (is_keyboard_master()) {
-        oled_write_ln_P(PSTR("OS"), false);
+        // The display is 21 characters by four lines and every one is spoken
+        // for, so the OS label shares its line with the OS rather than having
+        // one of its own.
+        oled_write_P(PSTR("OS "), false);
         oled_write_P(get_highest_layer(default_layer_state) == _LINUX ? PSTR("LINUX") : PSTR("MAC"), false);
         // Which OS is only half the story once the host reports one: LOCK is
         // what says this layer is a decision rather than a report, and that
@@ -826,6 +832,46 @@ bool oled_task_user(void) {
         }
         // Pads out the rest of the line, which is also what clears it when tmux
         // mode is off.
+        oled_write_ln_P(PSTR(""), false);
+        // What Claude is doing, and what it is allowed to do without asking.
+        // Neither is guessable from the keyboard and both change what the next
+        // keypress is worth: there is no point stepping through a transcript
+        // that is still being written, and bypassPermissions is worth seeing
+        // before you background something. Blank for any other program, because
+        // the line is only meaningful for Claude.
+        if (host_alive() && ctx.program == KB_PROGRAM_CLAUDE) {
+            switch (ctx.phase) {
+                case KB_PHASE_IDLE:
+                    oled_write_P(PSTR("idle"), false);
+                    break;
+                case KB_PHASE_RUNNING:
+                    oled_write_P(PSTR("run"), false);
+                    break;
+                case KB_PHASE_WAITING:
+                    oled_write_P(PSTR("wait"), false);
+                    break;
+            }
+            switch (ctx.perm) {
+                case KB_PERM_DEFAULT:
+                    oled_write_P(PSTR(" default"), false);
+                    break;
+                case KB_PERM_PLAN:
+                    oled_write_P(PSTR(" plan"), false);
+                    break;
+                case KB_PERM_ACCEPT_EDITS:
+                    oled_write_P(PSTR(" accept"), false);
+                    break;
+                case KB_PERM_AUTO:
+                    oled_write_P(PSTR(" auto"), false);
+                    break;
+                case KB_PERM_BYPASS:
+                    oled_write_P(PSTR(" bypass"), false);
+                    break;
+                case KB_PERM_DONT_ASK:
+                    oled_write_P(PSTR(" dontask"), false);
+                    break;
+            }
+        }
         oled_write_ln_P(PSTR(""), false);
         oled_write_ln_P(is_caps_word_on() ? PSTR("CAPS") : PSTR(""), false);
     }

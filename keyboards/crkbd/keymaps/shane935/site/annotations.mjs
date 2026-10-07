@@ -482,8 +482,9 @@ export default {
     behaviours: [
         {
             title: 'The OLED',
-            body: 'The master half prints the label OS, then MAC or LINUX — with LOCK after it ' +
-                'while the OS key is overruling the host — then the tmux mode ' +
+            body: 'Four lines of 21 characters, all of them spoken for. OS and then MAC or ' +
+                'LINUX — with LOCK after it while the OS key is overruling the host — then the ' +
+                'tmux mode ' +
                 'and thumb modifier if tmux mode is on — TREE, WINDOW or PANE, or the Within ' +
                 'target it resolved: COPY, TRSC, CLAUDE or HUNK, followed by RESIZE, SPLIT, ' +
                 'MOVE, WORD or LINE — then CAPS while Caps Word is ' +
@@ -492,7 +493,12 @@ export default {
                 'trailing ~ means no fresh report from the host: every tmux key still works, ' +
                 'and only the keys that need to know what is in the pane are missing. A ? means ' +
                 'the keyboard is waiting to hear — an intent the host has not finished, or a ' +
-                'Ctrl-O whose viewer it has not reported — and a ! is an intent that failed.',
+                'Ctrl-O whose viewer it has not reported — and a ! is an intent that failed. ' +
+                'The third line is for a Claude pane only: what Claude is doing (idle, run, ' +
+                'wait) and what it may do without asking (default, plan, accept, auto, bypass, ' +
+                'dontask). Neither is guessable from the keyboard, and both change what the next ' +
+                'keypress is worth — there is little point stepping through a transcript still ' +
+                'being written. Blank for any other program. The fourth is CAPS.',
         },
         {
             title: 'The host reports, the keyboard decides',
