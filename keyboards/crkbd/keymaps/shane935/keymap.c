@@ -68,6 +68,7 @@ enum custom_keycodes {
     TC_PREV,
     TC_LEAVE,
     TC_BKGD,
+    TC_MARK,
     TC_SEL,
     TC_COPY,
     TC_PSTE,
@@ -215,9 +216,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // There is no key here that says which program it is -- the keyboard is told.
     [_TMUX_WITHIN] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TC_NEXT,      TC_BKGD,        TC_UP,       TC_SEL,     TC_LEAVE,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TC_NEXT,      TC_MARK,        TC_UP,       TC_SEL,     TC_LEAVE,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      _______,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      _______,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      TC_BKGD,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      TC_SRCH,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -569,8 +570,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     // contradiction rule catches, so the next report moves to
                     // PANE. That is right rather than unfortunate: WITHIN
                     // without copy mode sends vi letters to the program.
+                    // A Claude pane has the viewer underneath, so closing copy
+                    // mode lands back in it. Anything else has nothing to unwind
+                    // to, so this does nothing and P is the way out.
                     case WT_COPY:
-                        tmux_fkey(KC_F20, 0);
+                        if (host_alive() && ctx.program == KB_PROGRAM_CLAUDE) {
+                            tmux_fkey(KC_F20, 0);
+                        }
                         return false;
                     // Nothing was opened, so there is nothing to unwind.
                     case WT_HUNK:
@@ -681,6 +687,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case TC_BKGD:
             within_send(WK_BKGD);
+            return false;
+        case TC_MARK:
+            within_send(WK_MARK);
             return false;
         case TC_SEL:
             within_send(WK_SELECT);

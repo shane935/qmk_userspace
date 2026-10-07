@@ -38,6 +38,9 @@ typedef enum {
     WK_PREV,
     WK_LEAVE,
     WK_BKGD,
+    // Two selections: MARK begins one at the cursor and extends by character,
+    // SELECT takes whole lines.
+    WK_MARK,
     WK_SELECT,
     WK_COPY,
     WK_PASTE,

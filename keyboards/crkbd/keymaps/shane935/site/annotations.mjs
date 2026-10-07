@@ -154,8 +154,8 @@ export default {
                 'to go and unwinds one level when there is not: pressed over copy mode it closes ' +
                 'copy mode and stays in Within, which over a Claude viewer lands you back in the ' +
                 'viewer with the next press offering the conversation again. On a pane with ' +
-                'nothing underneath, Within with no copy mode open is the state the keyboard ' +
-                'treats as the world having moved, so the next report drops you to Pane.',
+                'nothing underneath there is nothing to unwind to, so it does nothing at all and ' +
+                'Leave is the way out.',
         },
         TM_EXIT: {
             label: 'Exit',
@@ -318,13 +318,20 @@ export default {
             desc: 'Previous match',
             note: 'N — the previous match. Suppressed at a Claude prompt like n.',
         },
+        TC_MARK: {
+            label: 'Mark',
+            desc: 'Begin a selection at the cursor',
+            note: 'Space, which starts a selection where the cursor is and extends by character ' +
+                'as you move. Copy mode only — everywhere else a bare Space would go into the ' +
+                'program, which is why it resolves like every other key here rather than sitting ' +
+                'on the layer as a plain keycode. Mark then move then Copy is how you take part ' +
+                'of a line; Select is the whole-line version.',
+        },
         TC_SEL: {
             label: 'Select',
-            desc: 'Begin a selection',
-            note: 'V, which selects whole lines rather than characters. Copy mode only: ' +
-                'everywhere else a bare V would be typed into the program, which is why it is ' +
-                'resolved like every other key here rather than sitting on the layer as a plain ' +
-                'keycode.',
+            desc: 'Select whole lines',
+            note: 'V, which selects by line rather than by character and extends a line at a ' +
+                'time. Copy mode only, like Mark.',
         },
         TC_COPY: {
             label: 'Copy',

@@ -111,7 +111,8 @@ static const struct {
     {WT_COPY, WK_LEAVE, WM_NONE, KC_F20, KC_NO, 0, "copy leave is copy-mode -q"},
     {WT_COPY, WK_COPY, WM_NONE, KC_ENT, KC_NO, 0, "copy yank"},
     {WT_COPY, WK_PASTE, WM_NONE, KC_F20, C(KC_F22), 0, "copy paste leaves then pastes"},
-    {WT_COPY, WK_SELECT, WM_NONE, S(KC_V), KC_NO, 0, "copy begins a selection"},
+    {WT_COPY, WK_MARK, WM_NONE, KC_SPC, KC_NO, 0, "copy marks a character-wise selection"},
+    {WT_COPY, WK_SELECT, WM_NONE, S(KC_V), KC_NO, 0, "copy selects whole lines"},
     {WT_COPY, WK_ENTER, WM_NONE, KC_F19, KC_NO, 0, "entering copy opens copy mode"},
     {WT_COPY, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "copy has nothing to background"},
 
@@ -132,6 +133,7 @@ static const struct {
     {WT_TRANSCRIPT, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "transcript previous match"},
     {WT_TRANSCRIPT, WK_LEAVE, WM_NONE, C(KC_O), KC_NO, 0, "transcript leave closes the viewer"},
     {WT_TRANSCRIPT, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "transcript background is a tmux key"},
+    {WT_TRANSCRIPT, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "nothing to mark in the viewer"},
     {WT_TRANSCRIPT, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "nothing to select in the viewer"},
     {WT_TRANSCRIPT, WK_COPY, WM_NONE, KC_NO, KC_NO, 0, "nothing to yank in the viewer"},
     {WT_TRANSCRIPT, WK_PASTE, WM_NONE, KC_NO, KC_NO, 0, "nothing to paste in the viewer"},
@@ -151,6 +153,7 @@ static const struct {
     {WT_CLAUDE_SAFE, WK_PREV, WM_NONE, KC_NO, KC_NO, 0, "claude-safe previous would type an N"},
     {WT_CLAUDE_SAFE, WK_LEAVE, WM_NONE, KC_NO, KC_NO, 0, "claude-safe has nothing to leave"},
     {WT_CLAUDE_SAFE, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "claude-safe background is a tmux key"},
+    {WT_CLAUDE_SAFE, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "claude-safe mark would type a space"},
     {WT_CLAUDE_SAFE, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "claude-safe select would type a V"},
     {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_OPEN, "entering claude asks the host to open the viewer"},
 
@@ -171,6 +174,7 @@ static const struct {
     {WT_HUNK, WK_NEXT, WM_NONE, KC_N, KC_NO, 0, "hunk next match"},
     {WT_HUNK, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "hunk previous match"},
     {WT_HUNK, WK_LEAVE, WM_NONE, KC_ESC, KC_NO, 0, "hunk leave is Escape, never q"},
+    {WT_HUNK, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to mark"},
     {WT_HUNK, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "hunk has no selection"},
     {WT_HUNK, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to background"},
     {WT_HUNK, WK_ENTER, WM_NONE, KC_NO, KC_NO, 0, "hunk is already navigable"},
