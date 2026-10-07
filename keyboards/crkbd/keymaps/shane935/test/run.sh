@@ -19,7 +19,7 @@ tmp="${TMPDIR:-/tmp}"
 warn="-std=c11 -Wall -Wextra -Werror"
 # QMK's keycode headers, for the keycodes tmux_context.c resolves to.
 inc="-I$root/quantum -I$root/quantum/keymap_extras -I$root/quantum/sequencer"
-srcs="$here/../kb_protocol.c $here/../tmux_context.c"
+srcs="$here/../kb_protocol.c $here/../tmux_context.c $here/../kb_rules.c"
 
 if [ -n "$WASI_SDK" ]; then
     cat > "$tmp/run.mjs" <<'JS'

@@ -6,3 +6,4 @@ RAW_ENABLE = yes
 # QMK. test/run.sh does exactly that.
 SRC += kb_protocol.c
 SRC += tmux_context.c
+SRC += kb_rules.c

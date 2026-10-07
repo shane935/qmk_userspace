@@ -1,6 +1,7 @@
 #include QMK_KEYBOARD_H
 
 #include "kb_protocol.h"
+#include "kb_rules.h"
 #include "tmux_context.h"
 #ifdef RAW_ENABLE
 #    include "raw_hid.h"
@@ -267,41 +268,26 @@ static uint8_t  ctx_my_seq, ctx_nonce;
 // It describes one keypress, so send_state clears it on the way out.
 static uint8_t kb_event, kb_event_arg;
 
-// Where the base layer comes from. The host is the authority on which OS it is
-// running, and these are the two settings that outrank it. OS_SWAP cycles all
-// three in this order, so the way out of an override is the key that got you
-// into one, and three taps always brings you back to following the host.
-enum kb_os_source { KB_OS_FOLLOW, KB_OS_FORCE_MAC, KB_OS_FORCE_LINUX };
 static uint8_t kb_os_source = KB_OS_FOLLOW;
 
 // Evaluated at the keypress and never cached: a mode entered while the host was
 // alive can be left after it has died.
 static bool host_alive(void) {
-    return ctx_last_ms != 0 && timer_elapsed32(ctx_last_ms) < KB_HOST_TIMEOUT_MS;
+    return kb_host_alive(ctx_last_ms, timer_read32());
 }
 
-// Puts the base layer where the source in charge says it should be. Following a
-// host that has not said yet leaves it alone. The layer is persisted, as it has
-// always been, so an unplugged keyboard keeps the last one it was on -- but the
-// override itself is not, so a replug comes back up following the host.
+// Puts the base layer wherever the source in charge says, which may be nowhere.
+// The layer is persisted, as it has always been, so an unplugged keyboard keeps
+// the last one it was on -- the override itself is not, so a replug comes back
+// up following the host.
 static void kb_apply_os(void) {
-    uint8_t want;
-    switch (kb_os_source) {
-        case KB_OS_FORCE_MAC:
-            want = _MAC;
-            break;
-        case KB_OS_FORCE_LINUX:
-            want = _LINUX;
-            break;
-        default:
-            if (ctx.os != KB_OS_LINUX && ctx.os != KB_OS_MAC) {
-                return;
-            }
-            want = (ctx.os == KB_OS_LINUX) ? _LINUX : _MAC;
-            break;
+    uint8_t want = kb_os_wanted(kb_os_source, ctx.os);
+    if (want == KB_OS_UNKNOWN) {
+        return;
     }
-    if (get_highest_layer(default_layer_state) != want) {
-        set_single_persistent_default_layer(want);
+    uint8_t layer = (want == KB_OS_LINUX) ? _LINUX : _MAC;
+    if (get_highest_layer(default_layer_state) != layer) {
+        set_single_persistent_default_layer(layer);
     }
 }
 
@@ -479,12 +465,11 @@ static void within_send(within_key_t key) {
     }
     const uint16_t pair[2] = {a.key, a.then};
     for (int i = 0; i < 2; i++) {
-        uint8_t basic = pair[i] & 0xFF;
         if (pair[i] == KC_NO) {
             continue;
         }
-        if (basic >= KC_F13 && basic <= KC_F24) {
-            tmux_fkey(basic, (pair[i] >> 8) & 0x1F);
+        if (kb_is_tmux_row(pair[i])) {
+            tmux_fkey(kb_tmux_row_key(pair[i]), kb_tmux_row_mods(pair[i]));
         } else {
             tap_code16(pair[i]);
         }
@@ -546,7 +531,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         // first tap off Follow may not move the layer at all -- it is already
         // where the host put it -- so the OLED says LOCK to show what changed.
         case OS_SWAP:
-            kb_os_source = (kb_os_source == KB_OS_FORCE_LINUX) ? KB_OS_FOLLOW : kb_os_source + 1;
+            kb_os_source = kb_os_next(kb_os_source);
             kb_apply_os();
             send_state(0, 0);
             return false;
@@ -723,12 +708,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 
     kb_apply_os();
 
-    // The safety net, not a normal path. The world can move without the
-    // keyboard -- a pane closes, a program exits, someone presses q in copy
-    // mode -- and a report that no mode is open while the keyboard believes it
-    // is in one, with no intent in flight to explain it, means the keyboard is
-    // the one that is wrong. tmux_set_mode sends the corrected state itself.
-    if ((ctx.tmux_bits & KB_TMUX_PRESENT) && !(ctx.tmux_bits & (KB_TMUX_COPY_MODE | KB_TMUX_OTHER_MODE)) && ctx.intent_status == KB_INTENT_NONE && (tmux_mode == _TMUX_TREE || (tmux_mode == _TMUX_WITHIN && within_now() == WT_COPY))) {
+    // The safety net, not a normal path: the world moved without the keyboard
+    // -- a pane closed, a program exited -- so the host is right and the
+    // keyboard adopts PANE. tmux_set_mode sends the corrected state itself.
+    bool claims_mode = tmux_mode == _TMUX_TREE || (tmux_mode == _TMUX_WITHIN && within_now() == WT_COPY);
+    if (kb_adopt_pane(&ctx, claims_mode)) {
         tmux_set_mode(_TMUX_PANE);
         return;
     }
@@ -736,7 +720,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     // The intent is one-shot, so this is the whole of the keyboard's part in it:
     // a failure puts the mode back where the key found it, and either answer
     // leaves a mark on the OLED for a second.
-    if (ctx.intent_nonce == ctx_nonce && ctx.intent_status > KB_INTENT_PENDING) {
+    if (kb_intent_settled(&ctx, ctx_nonce)) {
         if (ctx.intent_status == KB_INTENT_FAILED && tmux_mode != intent_prev_mode) {
             intent_failed = true;
             tmux_set_mode(intent_prev_mode);
