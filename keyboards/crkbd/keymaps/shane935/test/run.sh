@@ -1,0 +1,47 @@
+#!/bin/sh
+# Builds and runs the unit tests for the pure parts of this keymap: kb_protocol.c
+# (the wire format) and tmux_context.c (what WITHIN mode sends). Neither calls
+# into QMK -- tmux_context.c includes QMK's keycode headers, which are enums and
+# macros only -- so this needs a C compiler and nothing else: no QMK build, no
+# toolchain, no keyboard.
+#
+# With a native compiler it just builds and runs. Without one, point WASI_SDK at
+# an unpacked wasi-sdk and it builds for wasm32-wasip1 and runs under node
+# instead, which is how it is tested in the agent sandbox:
+#
+#   curl -sL -o /tmp/w.tar.gz https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-25/wasi-sdk-25.0-x86_64-linux.tar.gz
+#   tar xzf /tmp/w.tar.gz -C /tmp
+#   WASI_SDK=/tmp/wasi-sdk-25.0-x86_64-linux test/run.sh
+set -e
+here=$(dirname "$0")
+root="$here/../../../../.."
+tmp="${TMPDIR:-/tmp}"
+warn="-std=c11 -Wall -Wextra -Werror"
+# QMK's keycode headers, for the keycodes tmux_context.c resolves to.
+inc="-I$root/quantum -I$root/quantum/keymap_extras -I$root/quantum/sequencer"
+srcs="$here/../kb_protocol.c $here/../tmux_context.c $here/../kb_rules.c"
+
+if [ -n "$WASI_SDK" ]; then
+    cat > "$tmp/run.mjs" <<'JS'
+import { WASI } from 'node:wasi';
+import { readFile } from 'node:fs/promises';
+const wasi = new WASI({ version: 'preview1', args: ['test'], env: {} });
+const mod = await WebAssembly.compile(await readFile(process.argv[2]));
+process.exitCode = wasi.start(await WebAssembly.instantiate(mod, wasi.getImportObject()));
+JS
+fi
+
+status=0
+for t in "$here"/*_test.c; do
+    name=$(basename "$t" .c)
+    if [ -n "$WASI_SDK" ]; then
+        # shellcheck disable=SC2086
+        "$WASI_SDK/bin/clang" --target=wasm32-wasip1 $warn $inc -o "$tmp/$name.wasm" "$t" $srcs
+        node --no-warnings "$tmp/run.mjs" "$tmp/$name.wasm" || status=1
+    else
+        # shellcheck disable=SC2086
+        "${CC:-cc}" $warn $inc -o "$tmp/$name" "$t" $srcs
+        "$tmp/$name" || status=1
+    fi
+done
+exit $status
