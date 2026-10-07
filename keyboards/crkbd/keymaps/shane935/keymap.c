@@ -444,9 +444,11 @@ static within_mod_t within_mod_now(void) {
     return tmux_mod == TMOD_WORD ? WM_WORD : tmux_mod == TMOD_LINE ? WM_LINE : WM_NONE;
 }
 
-// The mode the intent was sent from, so a `failed` status can put it back, and
-// when to stop showing the mark the status put on the OLED.
+// The mode the intent was sent from, so a `failed` status can put it back; the
+// status already acted on, so a host repeating it does not re-trigger; and when
+// the mark it left on the OLED goes out.
 static uint8_t  intent_prev_mode;
+static uint8_t  intent_acked;
 static uint32_t intent_mark_ms;
 static bool     intent_failed;
 
@@ -460,6 +462,7 @@ static void within_send(within_key_t key) {
     if (a.intent) {
         intent_prev_mode = tmux_mode;
         intent_failed    = false;
+        intent_acked     = KB_INTENT_NONE;
         send_state(a.intent, 0);
         return;
     }
@@ -720,12 +723,19 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     // The intent is one-shot, so this is the whole of the keyboard's part in it:
     // a failure puts the mode back where the key found it, and either answer
     // leaves a mark on the OLED for a second.
-    if (kb_intent_settled(&ctx, ctx_nonce)) {
-        if (ctx.intent_status == KB_INTENT_FAILED && tmux_mode != intent_prev_mode) {
-            intent_failed = true;
+    // Edge triggered on the status, not level: the host keeps reporting the same
+    // answer every 500 ms until the next intent, so acting on it each time would
+    // hold the OLED mark on for as long as the daemon kept talking.
+    if (kb_intent_settled(&ctx, ctx_nonce) && ctx.intent_status != intent_acked) {
+        intent_acked   = ctx.intent_status;
+        intent_failed  = ctx.intent_status == KB_INTENT_FAILED;
+        intent_mark_ms = timer_read32();
+        // WITHIN_DEEP does not move the mode -- it is already WITHIN, and a
+        // success only changes which target resolves -- so there is nothing to
+        // put back. This is for an intent that does move it.
+        if (intent_failed && tmux_mode != intent_prev_mode) {
             tmux_set_mode(intent_prev_mode);
         }
-        intent_mark_ms = timer_read32();
     }
 
     // A CONTEXT whose ack is not the current seq answered an older STATE, so
