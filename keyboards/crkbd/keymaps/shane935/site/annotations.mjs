@@ -52,7 +52,7 @@ export default {
             'No PERMISSIVE_HOLD, HOLD_ON_OTHER_KEY_PRESS or QUICK_TAP_TERM are set, so a fast ' +
             'roll across the home row resolves as taps rather than firing a modifier.',
         configFlags: ['SPLIT_LAYER_STATE_ENABLE', 'BOTH_SHIFTS_TURNS_ON_CAPS_WORD'],
-        rules: ['OLED_ENABLE', 'CAPS_WORD_ENABLE'],
+        rules: ['OLED_ENABLE', 'CAPS_WORD_ENABLE', 'RAW_ENABLE'],
     },
 
     groupProse: {
@@ -96,8 +96,11 @@ export default {
             label: 'OS',
             desc: 'Swap the default layer between Mac and Linux',
             note: 'Flips the default layer between Mac and Linux and writes it to EEPROM, so ' +
-                'it survives unplugging. This key is the only way to switch, and it exists ' +
-                'only here on the Nav layer. The OLED shows which mode you are in.',
+                'it survives unplugging. The host reports which OS it is, and the keyboard ' +
+                'follows that report — so this key is no longer how you switch day to day, it ' +
+                'is how you overrule the report. Pressing it once latches a manual override: ' +
+                'from then on the OS the host sends is recorded and shown but never applied. ' +
+                'It exists only here on the Nav layer, and the OLED shows which mode you are in.',
         },
 
         // --- getting in and out of tmux mode -------------------------------
@@ -530,7 +533,22 @@ export default {
                 'TRSC or HUNK for App mode, followed by RESIZE, SPLIT, MOVE, WORD, LINE, ' +
                 'HALF or FULL — then CAPS while Caps Word is ' +
                 'active. Blank lines mean neither is on. The tmux layers are toggled rather ' +
-                'than held, so this line is the only way to tell which mode you are in.',
+                'than held, so this line is the only way to tell which mode you are in. A ' +
+                'trailing ~ means no fresh report from the host: every tmux key still works, ' +
+                'and only the keys that need to know what is in the pane are missing.',
+        },
+        {
+            title: 'The host reports, the keyboard decides',
+            body: 'Over Raw HID the keyboard tells the host what it wants — which mode it is ' +
+                'in, which modifier is held, which OS layer it is on — and the host tells the ' +
+                'keyboard what it can see: the program in the focused pane, whether the pane ' +
+                'is in a tmux mode, and which OS it is actually running. Only that last one ' +
+                'is authoritative, which is why the OS key is now an override rather than a ' +
+                'switch. Everything else is a report the keyboard feeds into its own state, ' +
+                'never a command. The host has to send one every 500 ms, and three missed in ' +
+                'a row is what puts the ~ on the OLED. One rule runs the other way: if the ' +
+                'host says no tmux mode is open while the keyboard thinks Tree or Copy is, the ' +
+                'keyboard believes it and drops to Pane. A pane can close without asking.',
         },
         {
             title: 'App mode drives the program, not tmux',
