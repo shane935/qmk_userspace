@@ -38,6 +38,7 @@ typedef enum {
     WK_PREV,
     WK_LEAVE,
     WK_BKGD,
+    WK_SELECT,
     WK_COPY,
     WK_PASTE,
     WK_DEEP,

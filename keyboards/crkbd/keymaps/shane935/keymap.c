@@ -1,6 +1,7 @@
 #include QMK_KEYBOARD_H
 
 #include "kb_protocol.h"
+#include "tmux_context.h"
 #ifdef RAW_ENABLE
 #    include "raw_hid.h"
 #endif
@@ -19,8 +20,7 @@ enum layers {
     _TMUX_TREE,
     _TMUX_WINDOW,
     _TMUX_PANE,
-    _TMUX_APP,
-    _TMUX_COPY,
+    _TMUX_WITHIN,
 };
 
 enum custom_keycodes {
@@ -30,13 +30,9 @@ enum custom_keycodes {
     TM_TREE,
     TM_WIN,
     TM_PANE,
-    TM_APP,
-    TM_COPY,
+    TM_WITHIN,
     TM_EXIT,
     TM_DTCH,
-    // Not a mode key, but it ends in one: it opens Claude's transcript viewer
-    // and lands in APP mode with it. Only PANE has it.
-    TM_TRSC,
     // PANE mode.
     TP_UP,
     TP_DOWN,
@@ -58,27 +54,25 @@ enum custom_keycodes {
     // TREE mode.
     TT_SEL,
     TT_KILL,
-    // COPY mode.
+    // WITHIN mode. What each of these sends is not written here or in the
+    // layer: it comes out of within_resolve, from what the host reports is in
+    // the pane. The same key is a vi motion in copy mode, a prompt jump in
+    // Claude's transcript, and nothing at all at a live Claude prompt.
     TC_UP,
     TC_DOWN,
     TC_LEFT,
     TC_RGHT,
+    TC_SRCH,
+    TC_NEXT,
+    TC_PREV,
+    TC_LEAVE,
+    TC_BKGD,
+    TC_SEL,
     TC_COPY,
     TC_PSTE,
+    TC_DEEP,
     TC_WORD,
     TC_LINE,
-    // APP mode. It drives the program in the pane rather than tmux, so every
-    // one of these sends keys to the program with no prefix in front of them.
-    TA_UP,
-    TA_DOWN,
-    TA_LEFT,
-    TA_RGHT,
-    TA_NEXT,
-    TA_PREV,
-    TA_SRCH,
-    TA_TRSC,
-    TA_HALF,
-    TA_FULL,
 };
 
 // Thumbs: space = nav, enter = numbers
@@ -167,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      TM_EXIT,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          TM_TREE,       TM_WIN,      TM_PANE,       TM_APP,      TM_COPY,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
+          TM_TREE,       TM_WIN,      TM_PANE,    TM_WITHIN,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -204,7 +198,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [_TMUX_PANE] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,      TM_TRSC,       TP_LYT,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TP_LAST,      TP_ZOOM,        TP_UP,      XXXXXXX,       TP_LYT,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           _______,      _______,      _______,      _______,      _______,                                     XXXXXXX,      TP_LEFT,      TP_DOWN,      TP_RGHT,      TM_DTCH,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
@@ -214,33 +208,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                             //`-----------------------------------------'  `-----------------------------------------'
   ),
 
-    // App mode drives the program in the focused pane instead of tmux, so
-    // nothing here goes through the prefix. What each key sends depends on which
-    // program tmux_app says is there and, for Claude, on whether its transcript
-    // viewer is open; the tables in process_record_user are the whole story.
-    [_TMUX_APP] = LAYOUT_split_3x5_3(
+    // Within mode navigates inside whatever the focused pane is running. Not one
+    // of these keys has a fixed meaning: within_resolve decides what each sends
+    // from the host's report, so the same L is a vi w in copy mode, the next
+    // prompt in Claude's transcript, and nothing at all at a live Claude prompt.
+    // There is no key here that says which program it is -- the keyboard is told.
+    [_TMUX_WITHIN] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TA_NEXT,      XXXXXXX,        TA_UP,      TA_TRSC,      XXXXXXX,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TC_NEXT,      TC_BKGD,        TC_UP,       TC_SEL,     TC_LEAVE,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      _______,                                     TA_PREV,      TA_LEFT,      TA_DOWN,      TA_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      TC_DEEP,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      TA_SRCH,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      TC_SRCH,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    TA_HALF,      TA_FULL,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
-                                            //`-----------------------------------------'  `-----------------------------------------'
-  ),
-
-    // Copy mode drives tmux's copy-mode-vi key table, so the unmodified keys go
-    // straight through as the vi keys they are.
-    [_TMUX_COPY] = LAYOUT_split_3x5_3(
-  //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                        KC_N,       KC_SPC,        TC_UP,      S(KC_V),       KC_ESC,
-  //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      _______,                                     S(KC_N),      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
-  //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      XXXXXXX,
-  //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
-                                                    XXXXXXX,      TC_WORD,      TC_LINE,         XXXXXXX,      XXXXXXX,       XXXXXXX
+                                                    TC_WORD,      TC_LINE,      XXXXXXX,         XXXXXXX,      XXXXXXX,       XXXXXXX
                                             //`-----------------------------------------'  `-----------------------------------------'
   )
 };
@@ -263,27 +244,8 @@ enum tmux_modifier {
     TMOD_MOVE,
     TMOD_WORD = 5,
     TMOD_LINE,
-    TMOD_HALF,
-    TMOD_FULL,
 };
 static uint8_t tmux_mod = TMOD_NONE;
-
-// Which program APP mode is driving. It outlives a mode switch, so coming back
-// to APP lands on whatever was last selected, and the mode key is what cycles
-// it.
-enum tmux_apps {
-    TAPP_CLAUDE,
-    TAPP_HUNK,
-};
-static uint8_t tmux_app = TAPP_CLAUDE;
-
-// Whether Claude's transcript viewer is open. Claude draws on the alternate
-// screen, so the keyboard cannot see what state it is in and has to remember.
-// TA_TRSC is the only way it becomes true, and it becomes true by sending the
-// Ctrl-O that opens the viewer, so the two cannot disagree unless Claude's own
-// Esc closes it. A stale true is the dangerous direction -- it is what would
-// send Ctrl-D to a live prompt -- so the mode key can only ever set it false.
-static bool tmux_transcript = false;
 
 // Killing raises tmux's own "(y/n)" prompt, and the tree layer has no y on it
 // to answer with. So a kill is two presses of the same key: one to ask, one to
@@ -361,25 +323,10 @@ static uint8_t kb_mode_of(uint8_t mode) {
         // The protocol has one WITHIN where the keymap still has APP and COPY.
         // They become one layer in a later change; until then both report as
         // the mode they are turning into.
-        case _TMUX_APP:
-        case _TMUX_COPY:
+        case _TMUX_WITHIN:
             return KB_MODE_WITHIN;
         default:
             return KB_MODE_OFF;
-    }
-}
-
-// TMOD_* already carry the protocol's values, with 4 the hole where NEW was.
-// HALF and FULL have no value because the protocol does not have them: they are
-// what WORD and LINE become when APP folds into WITHIN, so they report as that.
-static uint8_t kb_mod_of(uint8_t mod) {
-    switch (mod) {
-        case TMOD_HALF:
-            return TMOD_WORD;
-        case TMOD_FULL:
-            return TMOD_LINE;
-        default:
-            return mod;
     }
 }
 
@@ -399,7 +346,9 @@ static void send_state_msg(uint8_t type, uint8_t intent, uint8_t arg) {
         .intent_arg  = arg,
         .nonce       = ctx_nonce,
         .mode        = kb_mode_of(tmux_mode),
-        .mod         = kb_mod_of(tmux_mod),
+        // TMOD_* are the protocol's own values, with 4 left as the hole where
+        // WINDOW's NEW thumb was, so there is nothing to translate.
+        .mod         = tmux_mod,
         .os          = get_highest_layer(default_layer_state) == _LINUX ? KB_OS_LINUX : KB_OS_MAC,
         .os_override = kb_os_source != KB_OS_FOLLOW,
         .host_alive  = host_alive(),
@@ -444,7 +393,7 @@ static void tmux_fkey(uint8_t fkey, uint8_t mods) {
 // what the keyboard sends, so the pane has to be taken back out of it before
 // anything else happens.
 static void tmux_quit_mode(void) {
-    if (tmux_mode == _TMUX_TREE || tmux_mode == _TMUX_COPY) {
+    if (tmux_mode == _TMUX_TREE || tmux_mode == _TMUX_WITHIN) {
         tmux_fkey(KC_F20, 0);
     }
 }
@@ -455,8 +404,7 @@ static void tmux_set_mode(uint8_t mode) {
     layer_off(_TMUX_TREE);
     layer_off(_TMUX_WINDOW);
     layer_off(_TMUX_PANE);
-    layer_off(_TMUX_APP);
-    layer_off(_TMUX_COPY);
+    layer_off(_TMUX_WITHIN);
     if (mode == TMUX_OFF) {
         layer_off(_TMUX);
     } else {
@@ -497,39 +445,50 @@ static void tmux_pane_arrow(uint8_t fkey) {
     }
 }
 
-// One APP key's row of the size table: what it sends with nothing held, with
-// HALF held and with FULL held. KC_NO means it sends nothing in that state.
-typedef struct {
-    uint16_t bare;
-    uint16_t half;
-    uint16_t full;
-} tmux_app_row_t;
-
-// The arrows take one row per state the layer can be read in, because the same
-// jump is a different key to Claude's prompt, Claude's transcript viewer and
-// hunk. Everything context-dependent about the layer goes through here.
-static void tmux_app_arrow(tmux_app_row_t viewer, tmux_app_row_t prompt, tmux_app_row_t hunk) {
-    tmux_app_row_t row     = (tmux_app == TAPP_HUNK) ? hunk : (tmux_transcript ? viewer : prompt);
-    uint16_t       keycode = (tmux_mod == TMOD_HALF) ? row.half : (tmux_mod == TMOD_FULL) ? row.full : row.bare;
-    if (keycode != KC_NO) {
-        tap_code16(keycode);
-    }
+// Which target WITHIN is driving right now. Resolved from the host at the
+// moment of the press, never remembered: the pane under the cursor can change
+// without the keyboard being told, and a stale answer is how Escape ends up in
+// a live Claude prompt. The OLED calls this too, so it is also what the word on
+// the screen means.
+static within_target_t within_now(void) {
+    return within_target(&ctx, host_alive());
 }
 
-// n, N and / are only keys inside a viewer. In Claude's prompt with the
-// transcript closed they would be typed into the message instead, so there they
-// send nothing at all.
-static void tmux_app_search(uint16_t keycode) {
-    if (tmux_app == TAPP_HUNK || tmux_transcript) {
-        tap_code16(keycode);
-    }
+static within_mod_t within_mod_now(void) {
+    return tmux_mod == TMOD_WORD ? WM_WORD : tmux_mod == TMOD_LINE ? WM_LINE : WM_NONE;
 }
 
-// Ctrl-O is Claude's own transcript toggle and the only thing this layer ever
-// sends it: Esc would interrupt whatever turn is running.
-static void tmux_app_toggle_transcript(void) {
-    tap_code16(C(KC_O));
-    tmux_transcript = !tmux_transcript;
+// The mode the intent was sent from, so a `failed` status can put it back, and
+// when to stop showing the mark the status put on the OLED.
+static uint8_t  intent_prev_mode;
+static uint32_t intent_mark_ms;
+static bool     intent_failed;
+
+// Sends one resolved action. A row of the tmux key table goes out through
+// tmux_fkey so the host still hears the event; anything else is a keystroke for
+// the program. An action that is all zero sends nothing, which is the point of
+// it -- that is claude-safe refusing to put a letter into a live prompt.
+static void within_send(within_key_t key) {
+    within_action_t a = within_resolve(within_now(), key, within_mod_now());
+
+    if (a.intent) {
+        intent_prev_mode = tmux_mode;
+        intent_failed    = false;
+        send_state(a.intent, 0);
+        return;
+    }
+    const uint16_t pair[2] = {a.key, a.then};
+    for (int i = 0; i < 2; i++) {
+        uint8_t basic = pair[i] & 0xFF;
+        if (pair[i] == KC_NO) {
+            continue;
+        }
+        if (basic >= KC_F13 && basic <= KC_F24) {
+            tmux_fkey(basic, (pair[i] >> 8) & 0x1F);
+        } else {
+            tap_code16(pair[i]);
+        }
+    }
 }
 
 static void tmux_switch_mode(uint8_t mode) {
@@ -537,8 +496,11 @@ static void tmux_switch_mode(uint8_t mode) {
     tmux_set_mode(mode);
     if (mode == _TMUX_TREE) {
         tmux_fkey(KC_F21, 0);
-    } else if (mode == _TMUX_COPY) {
-        tmux_fkey(KC_F19, 0);
+    } else if (mode == _TMUX_WITHIN) {
+        // Whatever the target needs to become navigable: copy-mode for a shell,
+        // Ctrl-O for a Claude pane whose viewer is shut, nothing for a viewer or
+        // for hunk, which are navigable already.
+        within_send(WK_ENTER);
     }
 }
 
@@ -565,11 +527,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TW_MOVE:
             tmux_set_mod(record->event.pressed ? TMOD_MOVE : TMOD_NONE);
             return false;
-        case TA_HALF:
-            tmux_set_mod(record->event.pressed ? TMOD_HALF : TMOD_NONE);
+        // WITHIN's two are held like PANE's, not toggled as COPY's used to be:
+        // one unit per thumb, and nothing survives letting go.
+        case TC_WORD:
+            tmux_set_mod(record->event.pressed ? TMOD_WORD : TMOD_NONE);
             return false;
-        case TA_FULL:
-            tmux_set_mod(record->event.pressed ? TMOD_FULL : TMOD_NONE);
+        case TC_LINE:
+            tmux_set_mod(record->event.pressed ? TMOD_LINE : TMOD_NONE);
             return false;
     }
 
@@ -605,31 +569,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tmux_switch_mode(_TMUX_PANE);
             }
             return false;
-        // Once in APP, the same key flips which program is being driven rather
-        // than leaving the mode. It only ever declares -- it sends nothing,
-        // because the pane a keystroke would land in is not necessarily the one
-        // the state is being moved to. Flipping to Claude also declares its
-        // viewer closed, which is both the resync for a viewer Claude's own Esc
-        // closed and the only state this key can put the flag into: false is the
-        // safe direction to be wrong in, and TA_TRSC is the only way to true.
-        case TM_APP:
-            if (tmux_mode != _TMUX_APP) {
-                tmux_switch_mode(_TMUX_APP);
-            } else if (tmux_app == TAPP_CLAUDE) {
-                tmux_app = TAPP_HUNK;
-            } else {
-                tmux_app        = TAPP_CLAUDE;
-                tmux_transcript = false;
-            }
-            return false;
-        case TM_COPY:
-            // Inside Claude's transcript viewer [ writes the whole conversation
-            // into the terminal's own scrollback, which is the only way copy
-            // mode gets to see more than the frame Claude is currently drawing.
-            if (tmux_mode == _TMUX_APP && tmux_app == TAPP_CLAUDE && tmux_transcript) {
-                tap_code(KC_LBRC);
-            }
-            tmux_switch_mode(tmux_mode == _TMUX_COPY ? _TMUX_PANE : _TMUX_COPY);
+        // Pressing it again re-runs the entry, which is a no-op in every target
+        // except a Claude pane whose viewer the host has not seen open -- there
+        // it is the retry for a Ctrl-O that did not land.
+        case TM_WITHIN:
+            tmux_switch_mode(_TMUX_WITHIN);
             return false;
         case TM_EXIT:
             // Leaving a tree or copy mode open would send the next thing typed
@@ -640,14 +584,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TM_DTCH:
             tmux_fkey(KC_F17, MOD_LCTL);
             tmux_set_mode(TMUX_OFF);
-            return false;
-        // The way in to Claude. Ctrl-O is a toggle, so the flag toggles with it
-        // rather than being forced on: press it in a pane whose viewer is
-        // already open and this closes it, with APP still agreeing about which.
-        case TM_TRSC:
-            tmux_app_toggle_transcript();
-            tmux_app = TAPP_CLAUDE;
-            tmux_switch_mode(_TMUX_APP);
             return false;
 
         case TP_UP:
@@ -712,90 +648,60 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tmux_kill_pending = !tmux_kill_pending;
             return false;
 
-        // WORD leaves up and down as they were; only LINE changes all four.
+        // Every one of these is the same two lines: ask the resolver what this
+        // key means in whatever the host says is in the pane, and send that. The
+        // keymap deliberately holds no opinion -- the tables are in
+        // tmux_context.c and the state behind them belongs to the host.
         case TC_UP:
-            tap_code(tmux_mod == TMOD_LINE ? KC_PGUP : KC_UP);
+            within_send(WK_UP);
             return false;
         case TC_DOWN:
-            tap_code(tmux_mod == TMOD_LINE ? KC_PGDN : KC_DOWN);
+            within_send(WK_DOWN);
             return false;
         case TC_LEFT:
-            switch (tmux_mod) {
-                case TMOD_WORD:
-                    tap_code(KC_B);
-                    break;
-                case TMOD_LINE:
-                    tap_code(KC_0);
-                    break;
-                default:
-                    tap_code(KC_LEFT);
-                    break;
-            }
+            within_send(WK_LEFT);
             return false;
         case TC_RGHT:
-            switch (tmux_mod) {
-                case TMOD_WORD:
-                    tap_code(KC_W);
-                    break;
-                case TMOD_LINE:
-                    tap_code16(KC_DLR);
-                    break;
-                default:
-                    tap_code(KC_RGHT);
-                    break;
+            within_send(WK_RIGHT);
+            return false;
+        case TC_SRCH:
+            within_send(WK_SEARCH);
+            return false;
+        case TC_NEXT:
+            within_send(WK_NEXT);
+            return false;
+        case TC_PREV:
+            within_send(WK_PREV);
+            return false;
+        case TC_BKGD:
+            within_send(WK_BKGD);
+            return false;
+        case TC_SEL:
+            within_send(WK_SELECT);
+            return false;
+        // Leaves what WITHIN opened, without leaving WITHIN: closing Claude's
+        // viewer lands back on its prompt, which is still a Claude pane, and the
+        // next report says so.
+        case TC_LEAVE:
+            within_send(WK_LEAVE);
+            return false;
+        case TC_DEEP:
+            within_send(WK_DEEP);
+            return false;
+        // The two that end the mode as well as doing something. Both are copy
+        // mode only, so the mode only moves if the resolver actually sent
+        // something -- in the transcript or at a Claude prompt they are dead and
+        // the keyboard stays where it is.
+        case TC_COPY:
+            if (within_now() == WT_COPY) {
+                within_send(WK_COPY);
+                tmux_set_mode(_TMUX_PANE);
             }
             return false;
-        case TC_WORD:
-            tmux_set_mod((tmux_mod == TMOD_WORD) ? TMOD_NONE : TMOD_WORD);
-            return false;
-        case TC_LINE:
-            tmux_set_mod((tmux_mod == TMOD_LINE) ? TMOD_NONE : TMOD_LINE);
-            return false;
-        case TC_COPY:
-            // Enter is copy-pipe-and-cancel, so copy mode is already gone.
-            tap_code(KC_ENT);
-            tmux_set_mode(_TMUX_PANE);
-            return false;
         case TC_PSTE:
-            tmux_fkey(KC_F20, 0);
-            tmux_fkey(KC_F22, MOD_LCTL);
-            tmux_set_mode(TMUX_OFF);
-            return false;
-
-        // The four arrows, each handing over its three rows in the order the
-        // viewer, the prompt and hunk read them. Arrows rather than j/k: both
-        // programs accept arrows, and an arrow is harmless in Claude's prompt
-        // where a letter would be typed into the message.
-        case TA_UP:
-            tmux_app_arrow((tmux_app_row_t){KC_UP, C(KC_U), KC_B}, (tmux_app_row_t){KC_UP, KC_PGUP, KC_PGUP}, (tmux_app_row_t){KC_UP, KC_U, KC_B});
-            return false;
-        case TA_DOWN:
-            tmux_app_arrow((tmux_app_row_t){KC_DOWN, C(KC_D), KC_SPC}, (tmux_app_row_t){KC_DOWN, KC_PGDN, KC_PGDN}, (tmux_app_row_t){KC_DOWN, KC_D, KC_SPC});
-            return false;
-        // Left and right jump between things rather than by distance, so the
-        // sizes read as prompt, annotated hunk, file. Claude's prompt has
-        // nothing to jump between, so there they are dead whatever is held.
-        case TA_LEFT:
-            tmux_app_arrow((tmux_app_row_t){KC_LCBR, KC_LCBR, KC_LCBR}, (tmux_app_row_t){KC_NO, KC_NO, KC_NO}, (tmux_app_row_t){KC_LBRC, KC_LCBR, KC_COMM});
-            return false;
-        case TA_RGHT:
-            tmux_app_arrow((tmux_app_row_t){KC_RCBR, KC_RCBR, KC_RCBR}, (tmux_app_row_t){KC_NO, KC_NO, KC_NO}, (tmux_app_row_t){KC_RBRC, KC_RCBR, KC_DOT});
-            return false;
-        case TA_NEXT:
-            tmux_app_search(KC_N);
-            return false;
-        case TA_PREV:
-            tmux_app_search(S(KC_N));
-            return false;
-        case TA_SRCH:
-            tmux_app_search(KC_SLSH);
-            return false;
-        // The only key that opens or closes the viewer, and so the only one that
-        // moves the flag by acting rather than by declaring. hunk has no second
-        // screen to open, so it is dead there.
-        case TA_TRSC:
-            if (tmux_app == TAPP_CLAUDE) {
-                tmux_app_toggle_transcript();
+            if (within_now() == WT_COPY) {
+                within_send(WK_PASTE);
+                tmux_set_mode(TMUX_OFF);
             }
             return false;
     }
@@ -822,9 +728,20 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     // mode -- and a report that no mode is open while the keyboard believes it
     // is in one, with no intent in flight to explain it, means the keyboard is
     // the one that is wrong. tmux_set_mode sends the corrected state itself.
-    if ((ctx.tmux_bits & KB_TMUX_PRESENT) && !(ctx.tmux_bits & (KB_TMUX_COPY_MODE | KB_TMUX_OTHER_MODE)) && ctx.intent_status == KB_INTENT_NONE && (tmux_mode == _TMUX_TREE || tmux_mode == _TMUX_COPY)) {
+    if ((ctx.tmux_bits & KB_TMUX_PRESENT) && !(ctx.tmux_bits & (KB_TMUX_COPY_MODE | KB_TMUX_OTHER_MODE)) && ctx.intent_status == KB_INTENT_NONE && (tmux_mode == _TMUX_TREE || (tmux_mode == _TMUX_WITHIN && within_now() == WT_COPY))) {
         tmux_set_mode(_TMUX_PANE);
         return;
+    }
+
+    // The intent is one-shot, so this is the whole of the keyboard's part in it:
+    // a failure puts the mode back where the key found it, and either answer
+    // leaves a mark on the OLED for a second.
+    if (ctx.intent_nonce == ctx_nonce && ctx.intent_status > KB_INTENT_PENDING) {
+        if (ctx.intent_status == KB_INTENT_FAILED && tmux_mode != intent_prev_mode) {
+            intent_failed = true;
+            tmux_set_mode(intent_prev_mode);
+        }
+        intent_mark_ms = timer_read32();
     }
 
     // A CONTEXT whose ack is not the current seq answered an older STATE, so
@@ -865,20 +782,24 @@ bool oled_task_user(void) {
             case _TMUX_PANE:
                 oled_write_P(PSTR("PANE"), false);
                 break;
-            // APP prints the program rather than the mode, because which one it
-            // is decides what every key on the layer sends -- and for Claude,
-            // whether the transcript viewer is open decides it too.
-            case _TMUX_APP:
-                if (tmux_app == TAPP_HUNK) {
-                    oled_write_P(PSTR("HUNK"), false);
-                } else if (tmux_transcript) {
-                    oled_write_P(PSTR("TRSC"), false);
-                } else {
-                    oled_write_P(PSTR("CLAUDE"), false);
+            // WITHIN prints the target rather than the mode. The mode is always
+            // WITHIN and says nothing; the target is what decides what every key
+            // on the layer sends, so it is the only thing worth the line.
+            case _TMUX_WITHIN:
+                switch (within_now()) {
+                    case WT_TRANSCRIPT:
+                        oled_write_P(PSTR("TRSC"), false);
+                        break;
+                    case WT_CLAUDE_SAFE:
+                        oled_write_P(PSTR("CLAUDE"), false);
+                        break;
+                    case WT_HUNK:
+                        oled_write_P(PSTR("HUNK"), false);
+                        break;
+                    default:
+                        oled_write_P(PSTR("COPY"), false);
+                        break;
                 }
-                break;
-            case _TMUX_COPY:
-                oled_write_P(PSTR("COPY"), false);
                 break;
         }
         switch (tmux_mod) {
@@ -897,12 +818,15 @@ bool oled_task_user(void) {
             case TMOD_LINE:
                 oled_write_P(PSTR(" LINE"), false);
                 break;
-            case TMOD_HALF:
-                oled_write_P(PSTR(" HALF"), false);
-                break;
-            case TMOD_FULL:
-                oled_write_P(PSTR(" FULL"), false);
-                break;
+        }
+        // ? is "waiting to hear", for the two things the keyboard asks for and
+        // cannot see the answer to: an intent the host is still working on, and a
+        // Ctrl-O whose viewer the host has not reported yet. ! is a failed
+        // intent, for a second.
+        if (ctx.intent_status == KB_INTENT_PENDING || (tmux_mode == _TMUX_WITHIN && within_now() == WT_CLAUDE_SAFE && ctx.transcript == KB_TRANSCRIPT_UNKNOWN)) {
+            oled_write_P(PSTR(" ?"), false);
+        } else if (intent_failed && timer_elapsed32(intent_mark_ms) < 1000) {
+            oled_write_P(PSTR(" !"), false);
         }
         // No fresh report from the host, so the keyboard has no idea what is in
         // the pane: WITHIN is plain copy mode and nothing resolves. Worth a mark

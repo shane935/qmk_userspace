@@ -51,6 +51,11 @@ static within_action_t resolve_copy(within_key_t key, within_mod_t mod) {
         // were wrong about which pane this is, and F20 never can.
         case WK_LEAVE:
             return SENDS(KC_F20);
+        // Begin a selection. Only copy mode has one, and a bare V anywhere else
+        // would be typed into the program -- which is why it resolves here with
+        // everything else rather than sitting on the layer as a plain keycode.
+        case WK_SELECT:
+            return SENDS(S(KC_V));
         case WK_COPY:
             // copy-pipe-and-cancel, so copy mode closes itself.
             return SENDS(KC_ENT);
