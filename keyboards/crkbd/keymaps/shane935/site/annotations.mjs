@@ -141,11 +141,12 @@ export default {
             desc: 'Within mode — navigate inside the pane',
             target: '_TMUX_WITHIN',
             note: 'Switches the keyboard to Within mode and does whatever the target needs to ' +
-                'become navigable: copy-mode for a shell, Ctrl-O for a Claude pane whose viewer ' +
-                'is shut, nothing at all for a viewer already open or for hunk. Which of those ' +
-                'it is comes from the host, not from a key — there is no App key any more and ' +
-                'nothing to cycle. Pressing it again re-runs the entry, which only does anything ' +
-                'on a Claude pane whose Ctrl-O did not land, so it doubles as the retry.',
+                'become navigable: copy-mode for a shell, nothing at all for a viewer already ' +
+                'open or for hunk, and for a Claude pane whose viewer is shut, an ask — the host ' +
+                'sends the Ctrl-O, watches whether the viewer actually opened, and tries again if ' +
+                'it did not. A busy pane can swallow that key and the keyboard would never know. ' +
+                'Which target it is comes from the host, not from a key: there is no App key any ' +
+                'more and nothing to cycle. The OLED shows ? until the viewer is confirmed open.',
         },
         TM_EXIT: {
             label: 'Exit',
@@ -350,7 +351,8 @@ export default {
         TC_DEEP: {
             label: 'Deep',
             desc: "Copy mode over Claude's whole conversation",
-            note: 'The one key that asks the host to do something rather than doing it itself. ' +
+            note: 'One of the two keys that ask the host to do something rather than doing it ' +
+                'themselves; entering Within on a Claude pane is the other. ' +
                 'Inside the viewer, [ writes the entire conversation into the terminal ' +
                 'scrollback — but that takes time the keyboard cannot measure, so the host ' +
                 'watches the pane until it stops growing and only then opens copy mode. The OLED ' +

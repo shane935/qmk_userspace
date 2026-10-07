@@ -117,9 +117,11 @@ static within_action_t resolve_claude_safe(within_key_t key, within_mod_t mod) {
         case WK_BKGD:
             return SENDS(C(KC_F23));
         // Opening the viewer is the whole point of entering WITHIN on a Claude
-        // pane, and Ctrl-O is safe in the prompt.
+        // pane. An intent rather than the Ctrl-O itself: a busy pane can swallow
+        // the key, and only the host can see that it did and try again. Nothing
+        // is lost by asking -- this target only exists when the host is alive.
         case WK_ENTER:
-            return SENDS(C(KC_O));
+            return INTENT(KB_INTENT_WITHIN_OPEN);
         default:
             return NOTHING;
     }

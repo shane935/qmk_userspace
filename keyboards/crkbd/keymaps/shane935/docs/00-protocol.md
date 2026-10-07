@@ -28,11 +28,17 @@ Supersedes `app-mode-spec.md`.
   confirm beyond observing the result. The firmware does not know the prefix
   and holds no second path: a terminal that will not pass these keys through
   is a terminal this keyboard does not drive.
-- **Intents** exist only for actions that need the host to wait on something
-  the keyboard cannot see. Currently one: WITHIN_DEEP. The keyboard decides
-  program-aware keys itself from CONTEXT (open the transcript with `Ctrl+o`
-  on a Claude pane, `copy-mode` on a shell pane); the host's job is to
-  observe and report, and the OLED shows `?` until the observation lands.
+- **Intents** exist only for actions that need the host to wait on, or retry
+  against, something the keyboard cannot see: WITHIN_DEEP and WITHIN_OPEN.
+  Both are about Claude's transcript viewer, which the keyboard has no way to
+  observe — Claude draws on the alternate screen. Everything else the keyboard
+  decides itself from CONTEXT and sends as keys (`copy-mode` on a shell pane,
+  the vi motions inside it); the host's job there is only to observe and
+  report, and the OLED shows `?` until the observation lands.
+- An intent is used rather than a keystroke only where the host can do
+  something the keyboard cannot. Opening the viewer qualifies because the key
+  can be swallowed by a busy pane and only the host can tell and try again;
+  it is not a tmux action, and the keyboard never sends `Ctrl+o` itself.
 - **Offline** (no fresh host report) the keyboard has no program knowledge,
   so WITHIN is tmux copy mode and nothing else; all tmux keys still work.
 
@@ -84,6 +90,7 @@ reply to every CONTEXT whose `ack` is stale.
 | Id | Name | Arg | Host action |
 |---|---|---|---|
 | `0x15` | WITHIN_DEEP | | focused pane is Claude with transcript observed open and not in copy mode: `send-keys [`, wait for the pane's `history_size` to stop growing, then `copy-mode`; otherwise `failed` |
+| `0x16` | WITHIN_OPEN | | focused pane is Claude with the transcript not observed open: `send-keys C-o`, observe whether the viewer opened, retry a bounded number of times, then `done` or `failed` |
 
 Everything else the keyboard used to ask for is a root-table tmux key (see
 the tmux key table below) or a keystroke the keyboard chooses from CONTEXT.

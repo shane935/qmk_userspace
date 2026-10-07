@@ -76,10 +76,16 @@ reflash, not a runtime state to carry. There is likewise no runtime branch on
 host liveness for tmux actions.
 
 Program-aware keys are chosen by the keyboard from `ctx` and sent as
-keystrokes; the only intent in the firmware is `TC_DEEP` → WITHIN_DEEP.
+keystrokes. Two keys are intents instead, both because Claude's viewer is
+unobservable from the keyboard: `TC_DEEP` → WITHIN_DEEP, and entering WITHIN on
+a `claude-safe` pane → WITHIN_OPEN.
 
-Intent status for WITHIN_DEEP: `pending` shows `?`; `done` clears it;
-`failed` restores the previous `tmux_mode` and shows `!` for one second.
+Intent status, for either: `pending` shows `?`; `done` clears it; `failed`
+restores the previous `tmux_mode` and shows `!` for one second. Acted on when
+the status changes, not while it holds — the host repeats it every 500 ms until
+the next intent, so a level test would pin the mark on. Neither intent actually
+moves `tmux_mode`, so the restore is reached by nothing today; it is kept for an
+intent that does.
 
 ## Layer contents
 
@@ -147,9 +153,16 @@ Then the key, with `mod` the held thumb:
 | COPY / PSTE | `KC_ENT` / F20 then C-F22 | nothing | nothing | nothing |
 
 Entering WITHIN (`TM_WITHIN` from any mode) resolves the same way: target
-`copy` → F19 (`copy-mode`); `claude-safe` → `C(KC_O)` and the OLED shows `?`
-until the host reports the transcript; `transcript` and `hunk` → nothing,
-already navigable. Offline the target is always `copy`, so F19.
+`copy` → F19 (`copy-mode`); `claude-safe` → the WITHIN_OPEN intent, and the
+OLED shows `?` until the host reports the transcript; `transcript` and `hunk` →
+nothing, already navigable. Offline the target is always `copy`, so F19 — which
+is why the keyboard never needs to send `Ctrl+o` itself: that path only exists
+when the host is alive to run it.
+
+WITHIN_OPEN rather than a keystroke because a busy pane can swallow the key and
+only the host can see that and try again. A `failed` status is the viewer
+refusing to open; the keyboard stays in `claude-safe`, which is still usable,
+rather than dropping out of WITHIN.
 
 Units: in copy mode WORD/LINE are word/line as today; in the transcript the
 unit is the prompt; in hunk the ladder is hunk, annotated hunk, file.
@@ -207,7 +220,7 @@ Both are added to the build with `SRC +=` in `rules.mk`.
   root binding); WITHIN is tmux copy mode with WORD/LINE, select, yank,
   search; OLED shows `~`.
 - Daemon, shell pane: F enters tmux copy mode; keys are the `copy` column.
-- Daemon, Claude pane: F sends `Ctrl+o`; OLED shows `CLAUDE ?` until the
+- Daemon, Claude pane: F sends the WITHIN_OPEN intent; OLED shows `CLAUDE ?` until the
   host observes the viewer, then `TRSC`; U sends `Ctrl+X Ctrl+B`; ↓ scrolls a line, WORD+↓ half a page,
   ← → step prompts; P closes the viewer and the OLED shows `CLAUDE`.
 - Daemon, Claude pane with the viewer closed: ↓ moves the cursor, WORD+↓

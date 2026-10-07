@@ -60,6 +60,7 @@ enum kb_intent_status { KB_INTENT_NONE, KB_INTENT_PENDING, KB_INTENT_DONE, KB_IN
 
 // Intent ids. 0x10-0x14 and 0x20-0x51 are reserved and must not be reused.
 #define KB_INTENT_WITHIN_DEEP 0x15
+#define KB_INTENT_WITHIN_OPEN 0x16
 
 // Everything STATE carries that the keyboard has to supply.
 typedef struct {

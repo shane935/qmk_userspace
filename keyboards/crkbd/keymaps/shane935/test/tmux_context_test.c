@@ -153,7 +153,7 @@ static const struct {
     {WT_CLAUDE_SAFE, WK_LEAVE, WM_NONE, KC_NO, KC_NO, 0, "claude-safe has nothing to leave"},
     {WT_CLAUDE_SAFE, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "claude-safe background is a tmux key"},
     {WT_CLAUDE_SAFE, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "claude-safe select would type a V"},
-    {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, C(KC_O), KC_NO, 0, "entering claude opens the viewer"},
+    {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_OPEN, "entering claude asks the host to open the viewer"},
     {WT_CLAUDE_SAFE, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep needs the viewer confirmed open"},
 
     // hunk -- the ladder is hunk, annotated hunk, file
