@@ -94,13 +94,16 @@ export default {
     customKeys: {
         OS_SWAP: {
             label: 'OS',
-            desc: 'Swap the default layer between Mac and Linux',
-            note: 'Flips the default layer between Mac and Linux and writes it to EEPROM, so ' +
-                'it survives unplugging. The host reports which OS it is, and the keyboard ' +
-                'follows that report — so this key is no longer how you switch day to day, it ' +
-                'is how you overrule the report. Pressing it once latches a manual override: ' +
-                'from then on the OS the host sends is recorded and shown but never applied. ' +
-                'It exists only here on the Nav layer, and the OLED shows which mode you are in.',
+            desc: 'Cycle: follow the host, force Mac, force Linux',
+            note: 'The host reports which OS it is and the keyboard follows, so this key is no ' +
+                'longer how you switch day to day — it is how you overrule the report, and how ' +
+                'you give it back. It cycles three ways: following the host, forced to Mac, ' +
+                'forced to Linux, and round to following again, so three taps always returns ' +
+                'you to the host whatever state you were in. While either force is on the OLED ' +
+                'says LOCK, which matters because the first tap off following often does not ' +
+                'move the layer at all — it is already where the host put it. The layer itself ' +
+                'is written to EEPROM as it always was and survives unplugging; the lock is not, ' +
+                'so a replug comes back up following the host. Nav layer only.',
         },
 
         // --- getting in and out of tmux mode -------------------------------
@@ -528,7 +531,8 @@ export default {
     behaviours: [
         {
             title: 'The OLED',
-            body: 'The master half prints the label OS, then MAC or LINUX, then the tmux mode ' +
+            body: 'The master half prints the label OS, then MAC or LINUX — with LOCK after it ' +
+                'while the OS key is overruling the host — then the tmux mode ' +
                 'and thumb modifier if tmux mode is on — TREE, WINDOW, PANE or COPY, or CLAUDE, ' +
                 'TRSC or HUNK for App mode, followed by RESIZE, SPLIT, MOVE, WORD, LINE, ' +
                 'HALF or FULL — then CAPS while Caps Word is ' +

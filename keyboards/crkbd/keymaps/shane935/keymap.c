@@ -334,15 +334,43 @@ static struct {
 // It describes one keypress, so send_state clears it on the way out.
 static uint8_t kb_event, kb_event_arg;
 
-// True once OS_SWAP has been pressed. The host is otherwise the authority on
-// which OS it is, and this is the one thing that outranks it.
-static bool kb_os_override = false;
+// Where the base layer comes from. The host is the authority on which OS it is
+// running, and these are the two settings that outrank it. OS_SWAP cycles all
+// three in this order, so the way out of an override is the key that got you
+// into one, and three taps always brings you back to following the host.
+enum kb_os_source { KB_OS_FOLLOW, KB_OS_FORCE_MAC, KB_OS_FORCE_LINUX };
+static uint8_t kb_os_source = KB_OS_FOLLOW;
 
 // Evaluated at the keypress and never cached: a mode entered while the host was
 // alive can be left after it has died. last_ctx_ms is zero until the first
 // CONTEXT, which stops the first 1.5 s after boot from reading as alive.
 static bool host_alive(void) {
     return ctx.last_ctx_ms != 0 && timer_elapsed32(ctx.last_ctx_ms) < KB_HOST_TIMEOUT_MS;
+}
+
+// Puts the base layer where the source in charge says it should be. Following a
+// host that has not said yet leaves it alone. The layer is persisted, as it has
+// always been, so an unplugged keyboard keeps the last one it was on -- but the
+// override itself is not, so a replug comes back up following the host.
+static void kb_apply_os(void) {
+    uint8_t want;
+    switch (kb_os_source) {
+        case KB_OS_FORCE_MAC:
+            want = _MAC;
+            break;
+        case KB_OS_FORCE_LINUX:
+            want = _LINUX;
+            break;
+        default:
+            if (ctx.os != KB_OS_LINUX && ctx.os != KB_OS_MAC) {
+                return;
+            }
+            want = (ctx.os == KB_OS_LINUX) ? _LINUX : _MAC;
+            break;
+    }
+    if (get_highest_layer(default_layer_state) != want) {
+        set_single_persistent_default_layer(want);
+    }
 }
 
 static uint8_t kb_mode_of(uint8_t mode) {
@@ -395,7 +423,7 @@ static void send_state_msg(uint8_t type, uint8_t intent, uint8_t arg) {
     report[7]  = intent ? ++ctx.nonce : ctx.nonce;
     report[8]  = kb_mode_of(tmux_mode);
     report[9]  = kb_mod_of(tmux_mod);
-    report[10] = (get_highest_layer(default_layer_state) == _LINUX ? KB_OS_LINUX : KB_OS_MAC) | (kb_os_override ? KB_OS_OVERRIDE : 0);
+    report[10] = (get_highest_layer(default_layer_state) == _LINUX ? KB_OS_LINUX : KB_OS_MAC) | (kb_os_source == KB_OS_FOLLOW ? 0 : KB_OS_OVERRIDE);
     report[11] = host_alive() ? 0x01 : 0x00;
     report[12] = kb_event;
     report[13] = kb_event_arg;
@@ -569,15 +597,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 
     switch (keycode) {
-        // Pressing this says the user knows better than the host's report, so
-        // from here on the host's os is recorded and shown but not applied.
+        // Follow the host, force Mac, force Linux, follow the host again. The
+        // first tap off Follow may not move the layer at all -- it is already
+        // where the host put it -- so the OLED says LOCK to show what changed.
         case OS_SWAP:
-            kb_os_override = true;
-            if (get_highest_layer(default_layer_state) == _LINUX) {
-                set_single_persistent_default_layer(_MAC);
-            } else {
-                set_single_persistent_default_layer(_LINUX);
-            }
+            kb_os_source = (kb_os_source == KB_OS_FORCE_LINUX) ? KB_OS_FOLLOW : kb_os_source + 1;
+            kb_apply_os();
             send_state(0, 0);
             return false;
 
@@ -822,14 +847,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         ctx.last_ctx_ms = 1;
     }
 
-    // The host is the only authority on which OS it is running on. OS_SWAP
-    // outranks it; nothing else does.
-    if (!kb_os_override && (ctx.os == KB_OS_LINUX || ctx.os == KB_OS_MAC)) {
-        uint8_t want = (ctx.os == KB_OS_LINUX) ? _LINUX : _MAC;
-        if (get_highest_layer(default_layer_state) != want) {
-            set_single_persistent_default_layer(want);
-        }
-    }
+    kb_apply_os();
 
     // The safety net, not a normal path. The world can move without the
     // keyboard -- a pane closes, a program exits, someone presses q in copy
@@ -859,11 +877,14 @@ void keyboard_post_init_user(void) {
 bool oled_task_user(void) {
     if (is_keyboard_master()) {
         oled_write_ln_P(PSTR("OS"), false);
-        if (get_highest_layer(default_layer_state) == _LINUX) {
-            oled_write_ln_P(PSTR("LINUX"), false);
-        } else {
-            oled_write_ln_P(PSTR("MAC"), false);
+        oled_write_P(get_highest_layer(default_layer_state) == _LINUX ? PSTR("LINUX") : PSTR("MAC"), false);
+        // Which OS is only half the story once the host reports one: LOCK is
+        // what says this layer is a decision rather than a report, and that
+        // OS_SWAP is what will give it back.
+        if (kb_os_source != KB_OS_FOLLOW) {
+            oled_write_P(PSTR(" LOCK"), false);
         }
+        oled_write_ln_P(PSTR(""), false);
         // The tmux layers are toggled, so without this there is no way to tell
         // which mode - or whether tmux mode at all - is on.
         switch (tmux_mode) {
