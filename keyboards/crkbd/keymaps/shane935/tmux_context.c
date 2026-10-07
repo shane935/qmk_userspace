@@ -84,8 +84,12 @@ static within_action_t resolve_transcript(within_key_t key, within_mod_t mod) {
         // Ctrl-O is the viewer's own toggle. Escape would interrupt the turn.
         case WK_LEAVE:
             return SENDS(C(KC_O));
+        // A tmux key rather than the chord itself. Claude's own C-x C-b ends in
+        // tmux's default prefix, so typing it directly would have tmux eat the
+        // C-b and take the next key as a prefix command; C-F23 is bound to
+        // send-keys, which writes into the pane past tmux's key tables.
         case WK_BKGD:
-            return SENDS2(C(KC_X), C(KC_B));
+            return SENDS(C(KC_F23));
         // The one intent in the firmware: only the host can tell when Claude has
         // finished writing the conversation into the scrollback.
         case WK_DEEP:
@@ -106,7 +110,7 @@ static within_action_t resolve_claude_safe(within_key_t key, within_mod_t mod) {
         case WK_DOWN:
             return SENDS(mod == WM_NONE ? KC_DOWN : KC_PGDN);
         case WK_BKGD:
-            return SENDS2(C(KC_X), C(KC_B));
+            return SENDS(C(KC_F23));
         // Opening the viewer is the whole point of entering WITHIN on a Claude
         // pane, and Ctrl-O is safe in the prompt.
         case WK_ENTER:

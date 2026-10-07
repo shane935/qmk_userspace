@@ -129,6 +129,7 @@ distinctly (see dotfiles spec); there is no fallback if it does not.
 | C-F20 | `new-window -b -c '#{pane_current_path}'` | bound, not sent |
 | C-F21 | `new-window -a -c '#{pane_current_path}'` | bound, not sent |
 | C-F22 | `paste-buffer` | PSTE |
+| C-F23 | `send-keys C-x C-b` | WITHIN BKGD on a Claude pane |
 
 "Bound, not sent" means the daemon emits the binding but no key on the
 keyboard reaches it today. They are in the table so that giving one a key is a
@@ -141,6 +142,14 @@ window it just moved, `-c '#{pane_current_path}'` is what opens a new pane or
 window beside the one it came from rather than in `$HOME`, and `swap-pane`
 takes the neighbour as `-s` rather than `-t` so focus ends up on the pane that
 moved, which is what lets repeated presses push one pane along a row.
+
+`C-F23` is the odd one: the command it runs sends keys to the program rather
+than doing anything to tmux. Claude's background chord is `C-x C-b`, and `C-b`
+is tmux's default prefix, so a keyboard typing it directly would have tmux
+swallow the second half and treat the next key as a prefix command. Routing it
+through `send-keys` writes straight into the pane, past tmux's key tables, so
+it works whatever the prefix is bound to. That is the only reason the firmware
+never emits `C-b` for anything.
 
 Inside copy mode the keyboard sends the vi keys; the generated conf binds
 the ones WITHIN relies on explicitly in `copy-mode-vi` so they do not depend

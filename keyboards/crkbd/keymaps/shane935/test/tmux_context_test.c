@@ -130,7 +130,7 @@ static const struct {
     {WT_TRANSCRIPT, WK_NEXT, WM_NONE, KC_N, KC_NO, 0, "transcript next match"},
     {WT_TRANSCRIPT, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "transcript previous match"},
     {WT_TRANSCRIPT, WK_LEAVE, WM_NONE, C(KC_O), KC_NO, 0, "transcript leave closes the viewer"},
-    {WT_TRANSCRIPT, WK_BKGD, WM_NONE, C(KC_X), C(KC_B), 0, "transcript background"},
+    {WT_TRANSCRIPT, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "transcript background is a tmux key"},
     {WT_TRANSCRIPT, WK_DEEP, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_DEEP, "deep is an intent here"},
     {WT_TRANSCRIPT, WK_COPY, WM_NONE, KC_NO, KC_NO, 0, "nothing to yank in the viewer"},
     {WT_TRANSCRIPT, WK_PASTE, WM_NONE, KC_NO, KC_NO, 0, "nothing to paste in the viewer"},
@@ -149,7 +149,7 @@ static const struct {
     {WT_CLAUDE_SAFE, WK_NEXT, WM_NONE, KC_NO, KC_NO, 0, "claude-safe next would type an n"},
     {WT_CLAUDE_SAFE, WK_PREV, WM_NONE, KC_NO, KC_NO, 0, "claude-safe previous would type an N"},
     {WT_CLAUDE_SAFE, WK_LEAVE, WM_NONE, KC_NO, KC_NO, 0, "claude-safe has nothing to leave"},
-    {WT_CLAUDE_SAFE, WK_BKGD, WM_NONE, C(KC_X), C(KC_B), 0, "claude-safe background"},
+    {WT_CLAUDE_SAFE, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "claude-safe background is a tmux key"},
     {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, C(KC_O), KC_NO, 0, "entering claude opens the viewer"},
     {WT_CLAUDE_SAFE, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep needs the viewer confirmed open"},
 
@@ -202,10 +202,15 @@ static void test_never_sent(void) {
                 char            what[96];
                 const uint16_t  sent[2] = {a.key, a.then};
 
-                // q quits hunk, and no target has any use for it.
+                // q quits hunk, and no target has any use for it. Ctrl-B is
+                // tmux's default prefix, and nothing here sends it at all --
+                // Claude's C-x C-b goes through a tmux send-keys row instead,
+                // which is the only reason this can be asserted everywhere.
                 for (int s = 0; s < 2; s++) {
                     snprintf(what, sizeof(what), "target %d key %d mod %d never sends q", t, k, m);
                     check(sent[s] != KC_Q, what);
+                    snprintf(what, sizeof(what), "target %d key %d mod %d never sends Ctrl-B", t, k, m);
+                    check(sent[s] != C(KC_B), what);
                 }
 
                 // Escape interrupts a running Claude turn, so it stays off both

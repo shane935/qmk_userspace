@@ -55,9 +55,9 @@ typedef enum { WM_NONE, WM_WORD, WM_LINE, WM__COUNT } within_mod_t;
 // real answer rather than a gap -- it is how WT_CLAUDE_SAFE refuses to put
 // Escape into a live Claude prompt.
 //
-// A `key` in the KC_F13..KC_F24 range is a row of the tmux key table, so the
-// keymap sends it with tmux_fkey to report the event rather than tapping it
-// directly.
+// A `key` whose basic keycode is KC_F13..KC_F24, with or without a modifier on
+// it, is a row of the tmux key table: the keymap sends those with tmux_fkey so
+// the host hears the event, rather than tapping them directly.
 typedef struct {
     uint16_t key;
     uint16_t then;

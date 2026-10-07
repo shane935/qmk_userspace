@@ -143,7 +143,7 @@ Then the key, with `mod` the held thumb:
 | SRCH | `/` | `/` | nothing | `/` |
 | NEXT / PREV | `n` / `N` | `n` / `N` | nothing | `n` / `N` |
 | LEAVE | F20 (`copy-mode -q`) | `C(KC_O)` | nothing | `KC_ESC` |
-| BKGD | nothing | `C(KC_X)` then `C(KC_B)` | `C(KC_X)` then `C(KC_B)` | nothing |
+| BKGD | nothing | C-F23 | C-F23 | nothing |
 | COPY / PSTE | `KC_ENT` / F20 then C-F22 | nothing | nothing | nothing |
 
 Entering WITHIN (`TM_WITHIN` from any mode) resolves the same way: target
@@ -158,6 +158,12 @@ Never sent to any program, by construction of the table: `q` (quits hunk),
 `Esc` to a Claude prompt (interrupts the turn), `Ctrl+d` to a Claude prompt
 (exits Claude Code), `Ctrl+b` anywhere (tmux prefix). `claude-safe` is the
 target whenever the viewer is not confirmed open.
+
+`Ctrl+d` is barred from `claude-safe` and not from `transcript`: at the prompt
+it exits Claude Code, and in the viewer it is half a page down and the prompt
+is not reading. That is what the two targets are for. `Ctrl+b` is barred
+everywhere, which is why BKGD is a tmux key — the pane's own `C-x C-b` reaches
+Claude through `send-keys`, past whatever the prefix is bound to.
 
 Mode keys from WITHIN: D sends F20 (`copy-mode -q`, which cancels copy or
 tree mode and is harmless otherwise) and goes to PANE; it never sends
