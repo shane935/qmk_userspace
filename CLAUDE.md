@@ -65,9 +65,11 @@ is the translation unit that includes it.
 
 ## The protocol
 
-`docs/00-protocol.md` is a contract shared with the daemon and dotfiles repos
-and is copied unchanged into each. Any change to it bumps `VERSION` and has to
-be made in all three.
+`docs/` holds all three specs and is where all three are edited: `00-protocol.md`
+is the wire contract, `20-daemon.md` the host daemon, `30-dotfiles.md` the tmux
+and Claude Code config. The daemon and dotfiles repos take copies from here, so a
+change goes in here first and is copied out. `VERSION` in `00-protocol.md` tracks
+the wire format and the key table, not the prose.
 
 There is no separate firmware spec: the code is it. `tmux_context.c` holds what
 WITHIN sends, `kb_rules.c` how reports change desired state, `kb_protocol.c` the

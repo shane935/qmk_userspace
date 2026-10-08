@@ -1,8 +1,14 @@
 # Context-aware keyboard: shared protocol
 
-This file is the contract between the three implementations. Copy it unchanged
-into each repo (firmware, daemon, dotfiles). Any change bumps `VERSION` and is
-made in all three.
+This file is the contract between the three implementations. It is edited here,
+in the firmware repo, beside `20-daemon.md` and `30-dotfiles.md`; the daemon and
+dotfiles repos take copies. Changes go in here first and are copied out, never
+the other way round.
+
+`VERSION` tracks the wire format and the key table — the things one
+implementation can disagree with another about. Correcting the prose to describe
+what the implementations already do is not a change in that sense and does not
+bump it.
 
 ## Model
 
