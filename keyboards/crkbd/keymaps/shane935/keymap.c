@@ -68,10 +68,10 @@ enum custom_keycodes {
     TC_PREV,
     TC_LEAVE,
     TC_BKGD,
+    TC_MARK,
     TC_SEL,
     TC_COPY,
     TC_PSTE,
-    TC_DEEP,
     TC_WORD,
     TC_LINE,
 };
@@ -216,9 +216,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // There is no key here that says which program it is -- the keyboard is told.
     [_TMUX_WITHIN] = LAYOUT_split_3x5_3(
   //,---------------------------------------------------------------------.                              ,---------------------------------------------------------------------.
-          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TC_NEXT,      TC_BKGD,        TC_UP,       TC_SEL,     TC_LEAVE,
+          XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      _______,                                     TC_NEXT,      TC_MARK,        TC_UP,       TC_SEL,     TC_LEAVE,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
-          _______,      _______,      _______,      _______,      TC_DEEP,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      XXXXXXX,
+          _______,      _______,      _______,      _______,      _______,                                     TC_PREV,      TC_LEFT,      TC_DOWN,      TC_RGHT,      TC_BKGD,
   //|-------------+-------------+-------------+-------------+-------------|                              |-------------+-------------+-------------+-------------+-------------|
           XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,      XXXXXXX,                                     XXXXXXX,      XXXXXXX,      TC_COPY,      TC_PSTE,      TC_SRCH,
   //|-------------+-------------+-------------+-------------+-------------+-------------|  |-------------+-------------+-------------+-------------+-------------+-------------|
@@ -233,11 +233,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #define TMUX_OFF 0
 static uint8_t tmux_mode = TMUX_OFF;
 
-// The left thumb modifier in effect. PANE, WINDOW and APP hold theirs, COPY
-// toggles its own, and only ever one at a time. PANE and WINDOW both call their
-// inner thumb MOVE and neither can be on while the other is, so they share a
-// value. These are the values STATE byte 9 carries, so 4 stays empty rather
-// than being reused: the protocol reserved it when WINDOW's NEW thumb went.
+// The left thumb modifier in effect. Every mode's is held, and only ever one at
+// a time. PANE and WINDOW both call their inner thumb MOVE and neither can be on
+// while the other is, so they share a value. These are the values STATE byte 9
+// carries, so 4 stays empty rather than being reused: the protocol reserved it
+// when WINDOW's NEW thumb went.
 enum tmux_modifier {
     TMOD_NONE,
     TMOD_RESIZE,
@@ -306,9 +306,6 @@ static uint8_t kb_mode_of(uint8_t mode) {
             return KB_MODE_WINDOW;
         case _TMUX_PANE:
             return KB_MODE_PANE;
-        // The protocol has one WITHIN where the keymap still has APP and COPY.
-        // They become one layer in a later change; until then both report as
-        // the mode they are turning into.
         case _TMUX_WITHIN:
             return KB_MODE_WITHIN;
         default:
@@ -375,7 +372,7 @@ static void tmux_fkey(uint8_t fkey, uint8_t mods) {
     send_state(0, 0);
 }
 
-// TREE and COPY put the pane into a real tmux mode rather than just changing
+// TREE and WITHIN put the pane into a real tmux mode rather than just changing
 // what the keyboard sends, so the pane has to be taken back out of it before
 // anything else happens.
 static void tmux_quit_mode(void) {
@@ -398,8 +395,8 @@ static void tmux_set_mode(uint8_t mode) {
         layer_on(mode);
     }
     tmux_mode = mode;
-    // The thumb modifiers belong to the mode they were pressed in, so a COPY
-    // toggle can never survive into PANE.
+    // The thumb modifiers belong to the mode they were pressed in, so WITHIN's
+    // WORD can never survive into PANE.
     tmux_mod = TMOD_NONE;
     send_state(0, 0);
 }
@@ -444,9 +441,9 @@ static within_mod_t within_mod_now(void) {
     return tmux_mod == TMOD_WORD ? WM_WORD : tmux_mod == TMOD_LINE ? WM_LINE : WM_NONE;
 }
 
-// The mode the intent was sent from, so a `failed` status can put it back, and
-// when to stop showing the mark the status put on the OLED.
-static uint8_t  intent_prev_mode;
+// The status already acted on, so a host repeating it does not re-trigger, and
+// when the mark it left on the OLED goes out.
+static uint8_t  intent_acked;
 static uint32_t intent_mark_ms;
 static bool     intent_failed;
 
@@ -458,8 +455,8 @@ static void within_send(within_key_t key) {
     within_action_t a = within_resolve(within_now(), key, within_mod_now());
 
     if (a.intent) {
-        intent_prev_mode = tmux_mode;
-        intent_failed    = false;
+        intent_failed = false;
+        intent_acked  = KB_INTENT_NONE;
         send_state(a.intent, 0);
         return;
     }
@@ -499,8 +496,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         tmux_kill_pending = false;
     }
 
-    // PANE's, WINDOW's and APP's thumb modifiers are held, so they are the only
-    // keys that have anything to do on the release.
+    // Every thumb modifier is held, so these are the only keys that have
+    // anything to do on the release.
     switch (keycode) {
         case TP_RSZE:
             tmux_set_mod(record->event.pressed ? TMOD_RESIZE : TMOD_NONE);
@@ -512,8 +509,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TW_MOVE:
             tmux_set_mod(record->event.pressed ? TMOD_MOVE : TMOD_NONE);
             return false;
-        // WITHIN's two are held like PANE's, not toggled as COPY's used to be:
-        // one unit per thumb, and nothing survives letting go.
+        // WITHIN's two are held like PANE's: one unit per thumb, and nothing
+        // survives letting go.
         case TC_WORD:
             tmux_set_mod(record->event.pressed ? TMOD_WORD : TMOD_NONE);
             return false;
@@ -536,7 +533,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             send_state(0, 0);
             return false;
 
-        // Tapping the current mode's own key quits TREE or COPY and falls back
+        // Tapping the current mode's own key quits TREE or WITHIN and falls back
         // to PANE; in PANE and WINDOW there is nothing open to quit.
         case TMUX_ON:
             tmux_set_mode(_TMUX_PANE);
@@ -554,10 +551,33 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tmux_switch_mode(_TMUX_PANE);
             }
             return false;
-        // Pressing it again re-runs the entry, which is a no-op in every target
-        // except a Claude pane whose viewer the host has not seen open -- there
-        // it is the retry for a Ctrl-O that did not land.
+        // F goes deeper while there is deeper to go and comes back out when there
+        // is not: on a Claude pane it opens the viewer, then asks for the whole
+        // conversation in copy mode, then leaves. In copy mode or hunk there is
+        // nothing further in, so it leaves straight away -- which is also what
+        // stops it closing and reopening copy mode and losing the cursor.
         case TM_WITHIN:
+            if (tmux_mode == _TMUX_WITHIN) {
+                switch (within_now()) {
+                    // Copy mode is as far in as it goes, so F comes out of it.
+                    // A Claude pane has the viewer underneath, so that lands back
+                    // in the viewer and WITHIN still means something. Anything
+                    // else has nothing underneath, and WITHIN with nothing open
+                    // sends vi letters to the program, so the mode comes out too.
+                    case WT_COPY:
+                        if (host_alive() && ctx.program == KB_PROGRAM_CLAUDE) {
+                            tmux_fkey(KC_F20, 0);
+                        } else {
+                            tmux_switch_mode(_TMUX_PANE);
+                        }
+                        return false;
+                    // Nothing was opened, so there is nothing to unwind.
+                    case WT_HUNK:
+                        return false;
+                    default:
+                        break;
+                }
+            }
             tmux_switch_mode(_TMUX_WITHIN);
             return false;
         case TM_EXIT:
@@ -661,6 +681,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case TC_BKGD:
             within_send(WK_BKGD);
             return false;
+        case TC_MARK:
+            within_send(WK_MARK);
+            return false;
         case TC_SEL:
             within_send(WK_SELECT);
             return false;
@@ -669,9 +692,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         // next report says so.
         case TC_LEAVE:
             within_send(WK_LEAVE);
-            return false;
-        case TC_DEEP:
-            within_send(WK_DEEP);
             return false;
         // The two that end the mode as well as doing something. Both are copy
         // mode only, so the mode only moves if the resolver actually sent
@@ -720,11 +740,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     // The intent is one-shot, so this is the whole of the keyboard's part in it:
     // a failure puts the mode back where the key found it, and either answer
     // leaves a mark on the OLED for a second.
-    if (kb_intent_settled(&ctx, ctx_nonce)) {
-        if (ctx.intent_status == KB_INTENT_FAILED && tmux_mode != intent_prev_mode) {
-            intent_failed = true;
-            tmux_set_mode(intent_prev_mode);
-        }
+    // Edge triggered on the status, not level: the host keeps reporting the same
+    // answer every 500 ms until the next intent, so acting on it each time would
+    // hold the OLED mark on for as long as the daemon kept talking.
+    if (kb_intent_settled(&ctx, ctx_nonce) && ctx.intent_status != intent_acked) {
+        // Neither intent moves the mode: both are entered from WITHIN and both
+        // succeed by changing which target resolves, so a failure needs nothing
+        // undone and the mark is the whole of the keyboard's response.
+        intent_acked   = ctx.intent_status;
+        intent_failed  = ctx.intent_status == KB_INTENT_FAILED;
         intent_mark_ms = timer_read32();
     }
 

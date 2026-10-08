@@ -1,5 +1,6 @@
-// Unit tests for tmux_context.c: the target resolution and the key table from
-// docs/01-firmware.md. Run with test/run.sh.
+// Unit tests for tmux_context.c: the target resolution and the key table. Run
+// with test/run.sh. The table below is the spec for what WITHIN sends -- there
+// is no prose copy of it to drift from.
 //
 // The table is the whole design of WITHIN mode, and most of its cells are a
 // judgement about what is safe to send to a program that cannot be asked what
@@ -79,7 +80,7 @@ static void test_target(void) {
 
 // ---------------------------------------------------------------- key table
 
-// docs/01-firmware.md, transcribed. `then` of KC_NO means a single keycode and
+// Every cell of it. `then` of KC_NO means a single keycode and
 // an intent of 0 means it is keys rather than an intent; a row of all three zero
 // is a cell that deliberately sends nothing.
 static const struct {
@@ -107,13 +108,13 @@ static const struct {
     {WT_COPY, WK_SEARCH, WM_NONE, KC_SLSH, KC_NO, 0, "copy search"},
     {WT_COPY, WK_NEXT, WM_NONE, KC_N, KC_NO, 0, "copy next match"},
     {WT_COPY, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "copy previous match"},
-    {WT_COPY, WK_LEAVE, WM_NONE, KC_F20, KC_NO, 0, "copy leave is copy-mode -q"},
+    {WT_COPY, WK_LEAVE, WM_NONE, KC_ESC, KC_NO, 0, "copy leave clears the selection"},
     {WT_COPY, WK_COPY, WM_NONE, KC_ENT, KC_NO, 0, "copy yank"},
     {WT_COPY, WK_PASTE, WM_NONE, KC_F20, C(KC_F22), 0, "copy paste leaves then pastes"},
-    {WT_COPY, WK_SELECT, WM_NONE, S(KC_V), KC_NO, 0, "copy begins a selection"},
+    {WT_COPY, WK_MARK, WM_NONE, KC_SPC, KC_NO, 0, "copy marks a character-wise selection"},
+    {WT_COPY, WK_SELECT, WM_NONE, S(KC_V), KC_NO, 0, "copy selects whole lines"},
     {WT_COPY, WK_ENTER, WM_NONE, KC_F19, KC_NO, 0, "entering copy opens copy mode"},
     {WT_COPY, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "copy has nothing to background"},
-    {WT_COPY, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep is inert outside claude"},
 
     // transcript -- the viewer is open and the unit is the prompt
     {WT_TRANSCRIPT, WK_UP, WM_NONE, KC_UP, KC_NO, 0, "transcript up a line"},
@@ -132,11 +133,11 @@ static const struct {
     {WT_TRANSCRIPT, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "transcript previous match"},
     {WT_TRANSCRIPT, WK_LEAVE, WM_NONE, C(KC_O), KC_NO, 0, "transcript leave closes the viewer"},
     {WT_TRANSCRIPT, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "transcript background is a tmux key"},
-    {WT_TRANSCRIPT, WK_DEEP, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_DEEP, "deep is an intent here"},
+    {WT_TRANSCRIPT, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "nothing to mark in the viewer"},
     {WT_TRANSCRIPT, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "nothing to select in the viewer"},
     {WT_TRANSCRIPT, WK_COPY, WM_NONE, KC_NO, KC_NO, 0, "nothing to yank in the viewer"},
     {WT_TRANSCRIPT, WK_PASTE, WM_NONE, KC_NO, KC_NO, 0, "nothing to paste in the viewer"},
-    {WT_TRANSCRIPT, WK_ENTER, WM_NONE, KC_NO, KC_NO, 0, "the viewer is already navigable"},
+    {WT_TRANSCRIPT, WK_ENTER, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_DEEP, "entering again asks for the whole conversation"},
 
     // claude-safe -- the viewer is not confirmed open, so a live prompt is possible
     {WT_CLAUDE_SAFE, WK_UP, WM_NONE, KC_UP, KC_NO, 0, "claude-safe up moves the cursor"},
@@ -152,9 +153,9 @@ static const struct {
     {WT_CLAUDE_SAFE, WK_PREV, WM_NONE, KC_NO, KC_NO, 0, "claude-safe previous would type an N"},
     {WT_CLAUDE_SAFE, WK_LEAVE, WM_NONE, KC_NO, KC_NO, 0, "claude-safe has nothing to leave"},
     {WT_CLAUDE_SAFE, WK_BKGD, WM_NONE, C(KC_F23), KC_NO, 0, "claude-safe background is a tmux key"},
+    {WT_CLAUDE_SAFE, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "claude-safe mark would type a space"},
     {WT_CLAUDE_SAFE, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "claude-safe select would type a V"},
-    {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, C(KC_O), KC_NO, 0, "entering claude opens the viewer"},
-    {WT_CLAUDE_SAFE, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep needs the viewer confirmed open"},
+    {WT_CLAUDE_SAFE, WK_ENTER, WM_NONE, KC_NO, KC_NO, KB_INTENT_WITHIN_OPEN, "entering claude asks the host to open the viewer"},
 
     // hunk -- the ladder is hunk, annotated hunk, file
     {WT_HUNK, WK_UP, WM_NONE, KC_UP, KC_NO, 0, "hunk up a line"},
@@ -172,11 +173,11 @@ static const struct {
     {WT_HUNK, WK_SEARCH, WM_NONE, KC_SLSH, KC_NO, 0, "hunk search"},
     {WT_HUNK, WK_NEXT, WM_NONE, KC_N, KC_NO, 0, "hunk next match"},
     {WT_HUNK, WK_PREV, WM_NONE, S(KC_N), KC_NO, 0, "hunk previous match"},
-    {WT_HUNK, WK_LEAVE, WM_NONE, KC_ESC, KC_NO, 0, "hunk leave is Escape, never q"},
+    {WT_HUNK, WK_LEAVE, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to leave"},
+    {WT_HUNK, WK_MARK, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to mark"},
     {WT_HUNK, WK_SELECT, WM_NONE, KC_NO, KC_NO, 0, "hunk has no selection"},
     {WT_HUNK, WK_BKGD, WM_NONE, KC_NO, KC_NO, 0, "hunk has nothing to background"},
     {WT_HUNK, WK_ENTER, WM_NONE, KC_NO, KC_NO, 0, "hunk is already navigable"},
-    {WT_HUNK, WK_DEEP, WM_NONE, KC_NO, KC_NO, 0, "deep is inert in hunk"},
 };
 
 static void test_table(void) {
@@ -195,9 +196,10 @@ static void test_table(void) {
 
 // ---------------------------------------------------------------- invariants
 
-// docs/01-firmware.md names four keystrokes that must never reach any program,
-// "by construction of the table". Construction is exactly what a spot check
-// cannot confirm, so this walks every cell there is.
+// Four keystrokes must never reach any program: q quits hunk, Escape interrupts
+// a Claude turn, Ctrl-D exits Claude Code at a prompt, and Ctrl-B is tmux's
+// prefix. That holds by construction of the table, and construction is exactly
+// what a spot check cannot confirm, so this walks every cell there is.
 static void test_never_sent(void) {
     for (int t = 0; t <= WT_HUNK; t++) {
         for (int k = 0; k < WK__COUNT; k++) {

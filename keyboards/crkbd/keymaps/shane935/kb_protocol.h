@@ -37,9 +37,9 @@ enum kb_os_byte { KB_OS_UNKNOWN, KB_OS_LINUX, KB_OS_MAC };
 #define KB_OS_OVERRIDE 0x80
 // STATE byte 11.
 #define KB_FLAG_HOST_ALIVE 0x01
-// STATE byte 12. The host never actuates any of these -- the keyboard already
-// did -- it only schedules its observation around them.
-enum kb_event_byte { KB_EVENT_NONE, KB_EVENT_CLAUDE_TRSC, KB_EVENT_TMUX_KEY, KB_EVENT_COPY_KEY };
+// STATE byte 12. The host never actuates this -- the keyboard already has -- it
+// only schedules its observation around it.
+enum kb_event_byte { KB_EVENT_NONE, KB_EVENT_TMUX_KEY };
 
 // CONTEXT byte 6.
 enum kb_program_byte { KB_PROGRAM_UNKNOWN, KB_PROGRAM_SHELL, KB_PROGRAM_CLAUDE, KB_PROGRAM_HUNK, KB_PROGRAM_OTHER };
@@ -58,8 +58,9 @@ enum kb_perm_byte { KB_PERM_UNKNOWN, KB_PERM_DEFAULT, KB_PERM_PLAN, KB_PERM_ACCE
 // CONTEXT byte 12.
 enum kb_intent_status { KB_INTENT_NONE, KB_INTENT_PENDING, KB_INTENT_DONE, KB_INTENT_FAILED };
 
-// Intent ids. 0x10-0x14 and 0x20-0x51 are reserved and must not be reused.
+// Intent ids. 0x10-0x14 and 0x20-0x51 are reserved: do not assign them.
 #define KB_INTENT_WITHIN_DEEP 0x15
+#define KB_INTENT_WITHIN_OPEN 0x16
 
 // Everything STATE carries that the keyboard has to supply.
 typedef struct {

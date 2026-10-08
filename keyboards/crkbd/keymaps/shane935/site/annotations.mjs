@@ -141,11 +141,20 @@ export default {
             desc: 'Within mode — navigate inside the pane',
             target: '_TMUX_WITHIN',
             note: 'Switches the keyboard to Within mode and does whatever the target needs to ' +
-                'become navigable: copy-mode for a shell, Ctrl-O for a Claude pane whose viewer ' +
-                'is shut, nothing at all for a viewer already open or for hunk. Which of those ' +
-                'it is comes from the host, not from a key — there is no App key any more and ' +
-                'nothing to cycle. Pressing it again re-runs the entry, which only does anything ' +
-                'on a Claude pane whose Ctrl-O did not land, so it doubles as the retry.',
+                'become navigable: copy-mode for a shell, nothing at all for a viewer already ' +
+                'open or for hunk, and for a Claude pane whose viewer is shut, an ask — the host ' +
+                'sends the Ctrl-O, watches whether the viewer actually opened, and tries again if ' +
+                'it did not. A busy pane can swallow that key and the keyboard would never know. ' +
+                'Which target it is comes from the host, not from a key: there is no App key any ' +
+                'more and nothing to cycle. The OLED shows ? until the viewer is confirmed open. ' +
+                'Pressing it again once the viewer is open is a second ask, for the whole ' +
+                'conversation: Claude writes it into the terminal scrollback and the host opens ' +
+                'copy mode over all of it, so you can search and yank across the lot rather than ' +
+                'the one frame Claude is drawing. So this key winds in while there is further in ' +
+                'to go and comes out of copy mode when there is not. Over a Claude viewer that ' +
+                'lands you back in the viewer, with the next press offering the conversation ' +
+                'again — in and back out. Anywhere else there is nothing underneath copy mode, so ' +
+                'it drops to Pane rather than leaving Within with nothing open.',
         },
         TM_EXIT: {
             label: 'Exit',
@@ -308,13 +317,20 @@ export default {
             desc: 'Previous match',
             note: 'N — the previous match. Suppressed at a Claude prompt like n.',
         },
+        TC_MARK: {
+            label: 'Mark',
+            desc: 'Begin a selection at the cursor',
+            note: 'Space, which starts a selection where the cursor is and extends by character ' +
+                'as you move. Copy mode only — everywhere else a bare Space would go into the ' +
+                'program, which is why it resolves like every other key here rather than sitting ' +
+                'on the layer as a plain keycode. Mark then move then Copy is how you take part ' +
+                'of a line; Select is the whole-line version.',
+        },
         TC_SEL: {
             label: 'Select',
-            desc: 'Begin a selection',
-            note: 'V, which selects whole lines rather than characters. Copy mode only: ' +
-                'everywhere else a bare V would be typed into the program, which is why it is ' +
-                'resolved like every other key here rather than sitting on the layer as a plain ' +
-                'keycode.',
+            desc: 'Select whole lines',
+            note: 'V, which selects by line rather than by character and extends a line at a ' +
+                'time. Copy mode only, like Mark.',
         },
         TC_COPY: {
             label: 'Copy',
@@ -331,32 +347,22 @@ export default {
         },
         TC_LEAVE: {
             label: 'Leave',
-            desc: 'Leave what Within opened',
-            note: 'Closes whatever the target has open, without leaving Within: copy-mode -q in ' +
-                "copy mode, Ctrl-O in Claude's viewer, Escape in hunk. At a Claude prompt there " +
+            desc: 'Undo what the target has open',
+            note: 'Undoes whatever the target has done, without leaving Within: clears the ' +
+                "selection in copy mode, closes the viewer in Claude's. At a Claude prompt there " +
                 'is nothing open and it sends nothing — never Escape, which would interrupt the ' +
-                'running turn. Closing the viewer lands back on the prompt, which is still a ' +
+                'running turn. Nothing in hunk either, which drives itself. Closing the viewer lands back on the prompt, which is still a ' +
                 'Claude pane, so the OLED goes from TRSC to CLAUDE rather than out of Within.',
         },
         TC_BKGD: {
             label: 'Bkgd',
-            desc: 'Background the running tool or agent',
-            note: "Claude's Ctrl-X Ctrl-B, on both Claude targets and nowhere else. It goes out " +
+            desc: 'Send the running agent to the background',
+            note: "Claude's Ctrl-X Ctrl-B, which sends the running agent to the background. On " +
+                'both Claude targets and nowhere else. It goes out ' +
                 "as a tmux key rather than as the chord itself, because Ctrl-B is tmux's default " +
                 'prefix: typed directly, tmux would swallow the second half and take the next ' +
                 'key as a prefix command. The tmux binding is send-keys, which writes into the ' +
                 "pane past tmux's own key tables.",
-        },
-        TC_DEEP: {
-            label: 'Deep',
-            desc: "Copy mode over Claude's whole conversation",
-            note: 'The one key that asks the host to do something rather than doing it itself. ' +
-                'Inside the viewer, [ writes the entire conversation into the terminal ' +
-                'scrollback — but that takes time the keyboard cannot measure, so the host ' +
-                'watches the pane until it stops growing and only then opens copy mode. The OLED ' +
-                'shows ? while it works and ! if it gave up, and a failure puts the mode back ' +
-                'where this key found it. Inert in every target but an open viewer: with the ' +
-                'viewer shut there is nothing to dump and the host would only refuse.',
         },
         TC_WORD: {
             hold: { label: 'Word', desc: 'Held: a bigger step' },

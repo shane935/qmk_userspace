@@ -3,8 +3,8 @@
 // Pure functions of the context and the held thumb: no QMK state, no layer
 // stack, nothing remembered. The keymap calls these on every keypress rather
 // than caching the answer, because the pane under the cursor can change without
-// the keyboard being told. Built natively by test/run.sh, which is where the
-// table in docs/01-firmware.md is actually checked.
+// the keyboard being told. test/tmux_context_test.c builds this natively and
+// holds the table it resolves, cell by cell.
 
 #pragma once
 
@@ -38,12 +38,16 @@ typedef enum {
     WK_PREV,
     WK_LEAVE,
     WK_BKGD,
+    // Two selections: MARK begins one at the cursor and extends by character,
+    // SELECT takes whole lines.
+    WK_MARK,
     WK_SELECT,
     WK_COPY,
     WK_PASTE,
-    WK_DEEP,
-    // Not a key on the layer: what pressing TM_WITHIN itself has to send to
-    // make the target navigable.
+    // Not a key on the layer: what pressing TM_WITHIN has to do to make the
+    // target navigable. It escalates on a Claude pane -- the first press asks
+    // the host to open the viewer, a second asks for the whole conversation in
+    // copy mode -- so neither of those needs a key of its own.
     WK_ENTER,
     WK__COUNT,
 } within_key_t;

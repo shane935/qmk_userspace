@@ -29,8 +29,8 @@ within_target_t within_target(const kb_context_t *ctx, bool host_alive) {
     return WT_COPY;
 }
 
-// tmux's copy-mode-vi keys, which is what the COPY layer has always sent. WORD
-// leaves up and down alone; only LINE changes all four.
+// tmux's copy-mode-vi keys. WORD leaves up and down alone; only LINE changes all
+// four.
 static within_action_t resolve_copy(within_key_t key, within_mod_t mod) {
     switch (key) {
         case WK_UP:
@@ -47,13 +47,18 @@ static within_action_t resolve_copy(within_key_t key, within_mod_t mod) {
             return SENDS(KC_N);
         case WK_PREV:
             return SENDS(S(KC_N));
-        // copy-mode -q rather than q: q would reach hunk if the host's report
-        // were wrong about which pane this is, and F20 never can.
+        // Escape, which copy-mode-vi reads as clear-selection: it drops a
+        // selection you did not mean and leaves the cursor where it is. Leaving
+        // copy mode is D, which goes to PANE as well, so this key is better
+        // spent on the thing nothing else can do.
         case WK_LEAVE:
-            return SENDS(KC_F20);
-        // Begin a selection. Only copy mode has one, and a bare V anywhere else
-        // would be typed into the program -- which is why it resolves here with
-        // everything else rather than sitting on the layer as a plain keycode.
+            return SENDS(KC_ESC);
+        // The two selections. Only copy mode has any, and a bare Space or V
+        // anywhere else would go into the program -- which is why they resolve
+        // here with everything else rather than sitting on the layer as plain
+        // keycodes.
+        case WK_MARK:
+            return SENDS(KC_SPC);
         case WK_SELECT:
             return SENDS(S(KC_V));
         case WK_COPY:
@@ -95,9 +100,13 @@ static within_action_t resolve_transcript(within_key_t key, within_mod_t mod) {
         // send-keys, which writes into the pane past tmux's key tables.
         case WK_BKGD:
             return SENDS(C(KC_F23));
-        // The one intent in the firmware: only the host can tell when Claude has
-        // finished writing the conversation into the scrollback.
-        case WK_DEEP:
+        // Entering WITHIN again, from a viewer the host has already confirmed
+        // open, asks for the whole conversation: [ writes it into the terminal's
+        // own scrollback so copy mode can see all of it rather than the one frame
+        // Claude is drawing. An intent because only the host can tell when the
+        // writing has stopped. So F escalates -- once for the viewer, again for
+        // everything in it -- and this needs no key of its own.
+        case WK_ENTER:
             return INTENT(KB_INTENT_WITHIN_DEEP);
         default:
             return NOTHING;
@@ -117,9 +126,11 @@ static within_action_t resolve_claude_safe(within_key_t key, within_mod_t mod) {
         case WK_BKGD:
             return SENDS(C(KC_F23));
         // Opening the viewer is the whole point of entering WITHIN on a Claude
-        // pane, and Ctrl-O is safe in the prompt.
+        // pane. An intent rather than the Ctrl-O itself: a busy pane can swallow
+        // the key, and only the host can see that it did and try again. Nothing
+        // is lost by asking -- this target only exists when the host is alive.
         case WK_ENTER:
-            return SENDS(C(KC_O));
+            return INTENT(KB_INTENT_WITHIN_OPEN);
         default:
             return NOTHING;
     }
@@ -142,9 +153,8 @@ static within_action_t resolve_hunk(within_key_t key, within_mod_t mod) {
             return SENDS(KC_N);
         case WK_PREV:
             return SENDS(S(KC_N));
-        // hunk takes Escape to close what it has open. Never q, which quits it.
-        case WK_LEAVE:
-            return SENDS(KC_ESC);
+        // Nothing for LEAVE: hunk has nothing WITHIN opened, and an Escape it did
+        // not ask for is not worth sending on the chance it closes something.
         default:
             return NOTHING;
     }
